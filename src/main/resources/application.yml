@@ -17,7 +17,7 @@ server:
       - group: 'default'
         paths-to-match: '/**'
         packages-to-scan: com.dyx.crossrow.controller
-  knife4j:
-    enable: true
-    setting:
-      language: en_us
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
