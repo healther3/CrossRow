@@ -6,17 +6,17 @@ server:
   servlet:
     context-path: /api
   # springdoc-openapi interface setting
-  springdoc:
-    swagger-ui:
-      path: /swagger-ui.html
-      tags-sorter: alpha
-      operations-sorter: alpha
-    api-docs:
-      path: /v3/api-docs
-    group-configs:
-      - group: 'default'
-        paths-to-match: '/**'
-        packages-to-scan: com.dyx.crossrow.controller
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.dyx.crossrow.controller
 knife4j:
   enable: true
   setting:
