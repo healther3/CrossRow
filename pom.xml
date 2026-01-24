@@ -35,13 +35,19 @@
             <artifactId>hutool-all</artifactId>
             <version>5.8.38</version>
         </dependency>
-
+        <!-- Sring AI Alibaba dependency -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-agent-framework</artifactId>
             <version>1.1.0.0-RC2</version>
         </dependency>
+        <!-- Langchang4j dependency -->
 
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-community-dashscope</artifactId>
+            <version>1.10.0-beta18</version>
+        </dependency>
         <!-- DashScope ChatModel 支持（如果使用其他模型，请跳转 Spring AI 文档选择对应的 starter） -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
