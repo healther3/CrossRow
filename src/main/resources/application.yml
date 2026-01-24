@@ -1,6 +1,8 @@
 spring:
   application:
     name: CrossRow
+  profiles:
+    active: local
 server:
   port: 8123
   servlet:
@@ -21,3 +23,4 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
