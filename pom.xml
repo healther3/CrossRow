@@ -53,7 +53,7 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-advisors-vector-store</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.2</version>
         </dependency>
 
         <dependency>
@@ -86,11 +86,11 @@
         </dependency>
 
         <!-- Langchang4j dependency -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-community-dashscope</artifactId>
-            <version>1.10.0-beta18</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>dev.langchain4j</groupId>-->
+<!--            <artifactId>langchain4j-community-dashscope</artifactId>-->
+<!--            <version>1.10.0-beta18</version>-->
+<!--        </dependency>-->
     </dependencies>
 
     <repositories>
