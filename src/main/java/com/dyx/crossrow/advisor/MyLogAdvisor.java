@@ -1,62 +1,67 @@
 
 package com.dyx.crossrow.advisor;
 
-import java.util.function.Function;
-
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClientMessageAggregator;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
-import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
-import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
-import org.springframework.ai.chat.client.advisor.api.StreamAdvisor;
-import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain;
+import org.springframework.ai.chat.client.advisor.api.*;
 import org.springframework.ai.chat.metadata.Usage;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.model.ModelOptionsUtils;
-import reactor.core.publisher.Flux;
+
 
 @Slf4j
-public class MyLogAdvisor implements CallAdvisor, StreamAdvisor {
-    public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
-        this.logRequest(chatClientRequest);
-        ChatClientResponse chatClientResponse = callAdvisorChain.nextCall(chatClientRequest);
-        this.logResponse(chatClientResponse);
-        return chatClientResponse;
+public class MyLogAdvisor implements BaseAdvisor {
+    private final int order;
+
+    public MyLogAdvisor() {
+        this(0);
     }
 
-    public Flux<ChatClientResponse> adviseStream(ChatClientRequest chatClientRequest, StreamAdvisorChain streamAdvisorChain) {
-        this.logRequest(chatClientRequest);
-        Flux<ChatClientResponse> chatClientResponses = streamAdvisorChain.nextStream(chatClientRequest);
-        return (new ChatClientMessageAggregator()).aggregateChatClientResponse(chatClientResponses, this::logResponse);
+    public MyLogAdvisor(int order) {
+        this.order = order;
     }
 
-    protected void logRequest(ChatClientRequest request) {
+    /**
+     *  output AI request before processing request
+     * @param request
+     * @param chain
+     * @return
+     */
+    @Override
+    public ChatClientRequest before(ChatClientRequest request, AdvisorChain chain) {
         log.info("AI request: {}", request.prompt().getUserMessage().getText());
+        return request;
     }
 
-    protected void logResponse(ChatClientResponse chatClientResponse) {
-        log.info("AI response: {}", chatClientResponse.chatResponse().getResult().getOutput().getText());
+    /**
+     *  output AI response and total token consumed
+     * @param response
+     * @param chain
+     * @return
+     */
+    @Override
+    public ChatClientResponse after(ChatClientResponse response, AdvisorChain chain) {
+        String content = response.chatResponse().getResult().getOutput().getText();
+        log.info("AI response: {}", content);
 
-        Usage usage = chatClientResponse.chatResponse().getMetadata().getUsage();
+        Usage usage = response.chatResponse().getMetadata().getUsage();
         if (usage != null) {
             log.info("Token usage - prompt: {}, completion: {}, total: {}",
                     usage.getPromptTokens(),
                     usage.getCompletionTokens(),
                     usage.getTotalTokens());
-        }    }
+        }
 
+        return response;
+    }
+
+    @Override
     public String getName() {
         return this.getClass().getSimpleName();
     }
 
+    @Override
     public int getOrder() {
-        return 100;
-    }
-
-    public String toString() {
-        return MyLogAdvisor.class.getSimpleName();
+        return this.order;
     }
 
 }

@@ -1,5 +1,6 @@
 package com.dyx.crossrow.app;
 import com.dyx.crossrow.advisor.MyLogAdvisor;
+import com.dyx.crossrow.advisor.ReReadingAdvisor;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -87,7 +88,10 @@ public class CrossRowApp {
                         MessageChatMemoryAdvisor.builder(chatMemory)
 //                              .conversationId() 设置会话id
                                 .build(),
-                        new MyLogAdvisor()
+                        // customized logger advisor
+                        new MyLogAdvisor(100)
+                        // customized enhanced advisor
+                        // new ReReadingAdvisor()
                 )
                 .build();
     }
