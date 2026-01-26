@@ -1,11 +1,13 @@
 package com.dyx.crossrow.chatmemory;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +45,15 @@ public class FileBasedChatMemory implements ChatMemory {
 
     }
 
+
+    private void saveConversation(String conversationId, List<Message> messages) {
+        File file = getConversationFile(conversationId);
+        try (Output output = new Output(new FileOutputStream(file))) {
+            kryo.writeObject(output, messages);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     /**
      * get or create conversation list
      * @param conversationId
