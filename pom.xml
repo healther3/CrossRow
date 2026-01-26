@@ -85,6 +85,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Source: https://mvnrepository.com/artifact/com.github.victools/jsonschema-generator -->
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-generator</artifactId>
+            <version>4.38.0</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- Langchang4j dependency -->
 <!--        <dependency>-->
 <!--            <groupId>dev.langchain4j</groupId>-->

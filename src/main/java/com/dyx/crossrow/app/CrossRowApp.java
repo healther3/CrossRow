@@ -12,6 +12,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 
 @Component
 @Slf4j
@@ -103,7 +105,8 @@ public class CrossRowApp {
      * @return
      */
     public String doChat(String message, String chatId) {
-        ChatClientResponse chatClientResponse = chatClient.prompt()
+        ChatClientResponse chatClientResponse = chatClient
+                .prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
@@ -115,5 +118,28 @@ public class CrossRowApp {
         String content = chatResponse.getResult().getOutput().getText();
         log.info("content: {}", content);
         return content;
+    }
+
+    record PainReport(String reportName, List<String> Solutions) {
+
+    }
+
+    /**
+     * chat with LLM and generate a report
+     * @param message
+     * @param chatId
+     * @return
+     */
+    public PainReport doChatReport(String message, String chatId) {
+        PainReport painReport = chatClient
+                .prompt()
+                .system(SYSTEM_PROMPT+"对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请至少列举3个解决方案")
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .call()
+                .entity(PainReport.class);
+
+        log.info("Report: {}", painReport);
+        return painReport;
     }
 }
