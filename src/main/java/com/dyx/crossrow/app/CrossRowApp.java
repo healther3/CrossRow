@@ -1,4 +1,5 @@
 package com.dyx.crossrow.app;
+import com.dyx.crossrow.advisor.MyLogAdvisor;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -85,7 +86,8 @@ public class CrossRowApp {
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory)
 //                              .conversationId() 设置会话id
-                                .build()
+                                .build(),
+                        new MyLogAdvisor()
                 )
                 .build();
     }
@@ -102,7 +104,9 @@ public class CrossRowApp {
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
                 .chatClientResponse();
-
+        // get information from response
+        //log.info(chatClientResponse.context().);
+        // get content from response
         ChatResponse chatResponse = chatClientResponse.chatResponse();
         String content = chatResponse.getResult().getOutput().getText();
         log.info("content: {}", content);
