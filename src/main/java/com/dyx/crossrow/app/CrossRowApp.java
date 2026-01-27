@@ -1,9 +1,11 @@
 package com.dyx.crossrow.app;
 import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.ReReadingAdvisor;
+import com.dyx.crossrow.chatmemory.FileBasedChatMemory;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import lombok.extern.slf4j.Slf4j;
@@ -79,9 +81,14 @@ public class CrossRowApp {
      */
     public CrossRowApp(ChatModel dashScopeChatModel) {
 
-        ChatMemory chatMemory = MessageWindowChatMemory.builder()
-                .maxMessages(10)
-                .build();
+        String fileDir = System.getProperty("user.dir")+"/tmp/chat-memory";
+        ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
+
+//        In memory chat memory
+//        ChatMemory chatMemory = MessageWindowChatMemory.builder()
+//                .chatMemoryRepository(new InMemoryChatMemoryRepository())
+//                .maxMessages(10)
+//                .build();
 
         // 基于内存的
         chatClient = ChatClient.builder(dashScopeChatModel)
@@ -133,7 +140,7 @@ public class CrossRowApp {
     public PainReport doChatReport(String message, String chatId) {
         PainReport painReport = chatClient
                 .prompt()
-                .system(SYSTEM_PROMPT+"对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请至少列举3个解决方案")
+                .system(SYSTEM_PROMPT+"***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
