@@ -1,6 +1,8 @@
 package com.dyx.crossrow.app;
 import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.ReReadingAdvisor;
+import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
+import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.chatmemory.FileBasedChatMemory;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -49,6 +51,8 @@ public class CrossRowApp {
         chatClient = ChatClient.builder(dashScopeChatModel)
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
+                        new SimpleAuthAdvisor(),
+                        new SimpleQuotaAdvisor(5),
                         MessageChatMemoryAdvisor.builder(chatMemory)
 //                              .conversationId() 设置会话id
                                 .build(),
@@ -66,11 +70,12 @@ public class CrossRowApp {
      * @param chatId
      * @return
      */
-    public String doChat(String message, String chatId) {
+    public String doChat(String message, String chatId, String userId) {
         ChatClientResponse chatClientResponse = chatClient
                 .prompt()
                 .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
                 .call()
                 .chatClientResponse();
         // get information from response
@@ -92,12 +97,13 @@ public class CrossRowApp {
      * @param chatId
      * @return
      */
-    public PainReport doChatReport(String message, String chatId) {
+    public PainReport doChatReport(String message, String chatId, String userId) {
         PainReport painReport = chatClient
                 .prompt()
                 .system(systemPromptTemplate.render()+"***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
                 .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
                 .call()
                 .entity(PainReport.class);
 

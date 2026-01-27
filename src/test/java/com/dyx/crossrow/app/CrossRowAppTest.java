@@ -19,15 +19,15 @@ class CrossRowAppTest {
         String chatId = UUID.randomUUID().toString();
         // first conversation
         String message = "你是谁？";
-        String answer = crossRowApp.doChat(message, chatId);
+        String answer = crossRowApp.doChat(message, chatId, "admin");
         Assertions.assertNotNull(answer);
         // second conversation
          message = "我每天上学很累";
-         answer = crossRowApp.doChat(message, chatId);
+         answer = crossRowApp.doChat(message, chatId,"张三");
          Assertions.assertNotNull(answer);
         // third conversation
          message = "你还记得我为什么很累吗";
-         answer = crossRowApp.doChat(message, chatId);
+         answer = crossRowApp.doChat(message, chatId,"admin");
         Assertions.assertNotNull(answer);
     }
 
@@ -36,7 +36,7 @@ class CrossRowAppTest {
     void doChatReport() {
         String chatId = UUID.randomUUID().toString();
         String message = "我每天上学很累，家里人对我要求太高";
-        CrossRowApp.PainReport answer = crossRowApp.doChatReport(message, chatId);
+        CrossRowApp.PainReport answer = crossRowApp.doChatReport(message, chatId, "admin");
         Assertions.assertNotNull(answer);
     }
 }
