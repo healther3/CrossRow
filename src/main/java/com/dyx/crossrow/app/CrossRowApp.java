@@ -1,20 +1,25 @@
 package com.dyx.crossrow.app;
+
 import com.dyx.crossrow.advisor.MyLogAdvisor;
-import com.dyx.crossrow.advisor.ReReadingAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
-import com.dyx.crossrow.chatmemory.FileBasedChatMemory;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+
+
 
 import java.util.List;
 
@@ -26,9 +31,12 @@ public class CrossRowApp {
     private final ChatClient chatClient;
     private final SystemPromptTemplate systemPromptTemplate;
 
+    @jakarta.annotation.Resource
+    private VectorStore vectorStore;
+
     /**
      *  initalize the app(memory based)
-     * @param dashScopeChatModel
+     * @param dashScopeChatModel dashscope chat model
      */
     public CrossRowApp(ChatModel dashScopeChatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
 
@@ -64,9 +72,9 @@ public class CrossRowApp {
 
     /**
      *  chat with language model that has memory
-     * @param message
-     * @param chatId
-     * @return
+     * @param message user given message
+     * @param chatId chat conversation ID
+     * @return information in chat
      */
     public String doChat(String message, String chatId, String userId) {
         ChatClientResponse chatClientResponse = chatClient
@@ -91,9 +99,9 @@ public class CrossRowApp {
 
     /**
      * chat with LLM and generate a report
-     * @param message
-     * @param chatId
-     * @return
+     * @param message user given message
+     * @param chatId chat conversation ID
+     * @return  ai response with report
      */
     public PainReport doChatReport(String message, String chatId, String userId) {
         PainReport painReport = chatClient
@@ -108,4 +116,42 @@ public class CrossRowApp {
         log.info("Report: {}", painReport);
         return painReport;
     }
+
+    /**
+     *
+     * @param message user given message
+     * @param chatId chat id
+     * @param userId userid
+     * @return ai response
+     */
+    public String doChatWithRag(String message, String chatId, String userId) {
+        ChatClientResponse chatClientResponse = chatClient
+                .prompt()
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
+                .advisors(new MyLogAdvisor())
+                .advisors(QuestionAnswerAdvisor.builder(vectorStore)
+                        .searchRequest(SearchRequest.builder()
+                                .topK(2)
+                                .similarityThreshold(0.5)
+                        .build())
+                        .promptTemplate(new PromptTemplate("""
+                下面是一些会帮助回答用户问题的信息
+                ---------------------
+                {question_answer_context}
+                ---------------------
+                结合这些可以帮助回答的上下文信息，给出用户问题分析和解决方案.
+                问题: {query}
+                回答:
+                """))
+                        .build())
+                .call()
+                .chatClientResponse();
+
+        String content = chatClientResponse.chatResponse().getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
+    }
+
 }

@@ -22,15 +22,17 @@ public class RedisChatMemory implements ChatMemory {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final Duration ttl;  // 过期时间
-
-    public RedisChatMemory(StringRedisTemplate redisTemplate) {
-        this(redisTemplate, Duration.ofDays(7));  // 默认7天过期
-    }
+    private final int maxMessages;
 
     public RedisChatMemory(StringRedisTemplate redisTemplate, Duration ttl) {
+        this(redisTemplate, ttl, 10);  // 默认10条
+    }
+
+    public RedisChatMemory(StringRedisTemplate redisTemplate, Duration ttl, int maxMessages) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = new ObjectMapper();
         this.ttl = ttl;
+        this.maxMessages = maxMessages;
     }
 
     @Override
@@ -40,6 +42,11 @@ public class RedisChatMemory implements ChatMemory {
         try {
             // 获取现有消息
             List<Map<String, Object>> existingMessages = getMessagesFromRedis(key);
+
+            int size = existingMessages.size();
+            if (size > maxMessages) {
+                existingMessages = existingMessages.subList(size - maxMessages, size);
+            }
 
             // 添加新消息
             for (Message message : messages) {

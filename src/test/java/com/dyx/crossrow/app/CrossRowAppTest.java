@@ -39,4 +39,12 @@ class CrossRowAppTest {
         CrossRowApp.PainReport answer = crossRowApp.doChatReport(message, chatId, "admin");
         Assertions.assertNotNull(answer);
     }
+
+    @Test
+    void doChatWithRag() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "我时常感到生活是无意义的，我每天都在做重复的事情。";
+        String answer = crossRowApp.doChatWithRag(message, chatId, "admin");
+        Assertions.assertNotNull(answer);
+    }
 }
