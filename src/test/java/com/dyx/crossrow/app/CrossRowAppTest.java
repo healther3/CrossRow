@@ -23,7 +23,7 @@ class CrossRowAppTest {
         Assertions.assertNotNull(answer);
         // second conversation
          message = "我每天上学很累";
-         answer = crossRowApp.doChat(message, chatId,"张三");
+         answer = crossRowApp.doChat(message, chatId,"admin");
          Assertions.assertNotNull(answer);
         // third conversation
          message = "你还记得我为什么很累吗";

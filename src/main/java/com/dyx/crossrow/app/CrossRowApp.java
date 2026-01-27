@@ -7,15 +7,11 @@ import com.dyx.crossrow.chatmemory.FileBasedChatMemory;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -34,20 +30,22 @@ public class CrossRowApp {
      *  initalize the app(memory based)
      * @param dashScopeChatModel
      */
-    public CrossRowApp(ChatModel dashScopeChatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource) {
+    public CrossRowApp(ChatModel dashScopeChatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
 
-        this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
-        String fileDir = System.getProperty("user.dir")+"/tmp/chat-memory";
-        ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
+        // get template from resource
+            this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
+
+//            基于文件保存 chat memory
+//            String fileDir = System.getProperty("user.dir")+"/tmp/chat-memory";
+//            ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
 
 
-//        In memory chat memory
+//        In memory chat memory 基于内存的chat memory
 //        ChatMemory chatMemory = MessageWindowChatMemory.builder()
 //                .chatMemoryRepository(new InMemoryChatMemoryRepository())
 //                .maxMessages(10)
 //                .build();
 
-        // 基于内存的
         chatClient = ChatClient.builder(dashScopeChatModel)
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
