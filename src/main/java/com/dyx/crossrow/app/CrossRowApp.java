@@ -5,15 +5,13 @@ import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -33,6 +31,9 @@ public class CrossRowApp {
 
     @jakarta.annotation.Resource
     private VectorStore vectorStore;
+
+    @jakarta.annotation.Resource
+    private Advisor ragAdvisor;
 
     /**
      *  initalize the app(memory based)
@@ -118,7 +119,7 @@ public class CrossRowApp {
     }
 
     /**
-     *
+     * Chat with RAG (Retrieval Augmented Generation)
      * @param message user given message
      * @param chatId chat id
      * @param userId userid
@@ -130,22 +131,23 @@ public class CrossRowApp {
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
-                .advisors(new MyLogAdvisor())
-                .advisors(QuestionAnswerAdvisor.builder(vectorStore)
-                        .searchRequest(SearchRequest.builder()
-                                .topK(2)
-                                .similarityThreshold(0.5)
-                        .build())
-                        .promptTemplate(new PromptTemplate("""
-                下面是一些会帮助回答用户问题的信息
-                ---------------------
-                {question_answer_context}
-                ---------------------
-                结合这些可以帮助回答的上下文信息，给出用户问题分析和解决方案.
-                问题: {query}
-                回答:
-                """))
-                        .build())
+                .advisors(ragAdvisor)
+//                .advisors(QuestionAnswerAdvisor.builder(vectorStore)
+//                        .searchRequest(SearchRequest.builder()
+//                                .topK(2)
+//                                .similarityThreshold(0.5)
+//
+//                        .build())
+//                        .promptTemplate(new PromptTemplate("""
+//                下面是一些会帮助回答用户问题的信息
+//                ---------------------
+//                {question_answer_context}
+//                ---------------------
+//                结合这些可以帮助回答的上下文信息，给出用户问题分析和解决方案.
+//                *回答时请注明信息来源，例如:根据存在主义哲学观念，....*
+//                问题: {query}
+//                回答:
+//                """))
                 .call()
                 .chatClientResponse();
 

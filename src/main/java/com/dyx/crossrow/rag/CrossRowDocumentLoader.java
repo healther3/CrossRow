@@ -41,7 +41,16 @@ public class CrossRowDocumentLoader {
                         .withAdditionalMetadata("filename", fileName)
                         .build();
                 MarkdownDocumentReader markdownDocumentReader= new  MarkdownDocumentReader(resource,config);
-                allFiles.addAll(markdownDocumentReader.read());
+                // 读取后处理：在内容前加上文件名
+                List<Document> docs = markdownDocumentReader.read();
+                for (Document doc : docs) {
+                    String enrichedContent = "[文档来源: " + fileName + "]\n\n" + doc.getText();
+                    Document enrichedDoc = Document.builder()
+                            .text(enrichedContent)
+                            .metadata(doc.getMetadata())
+                            .build();
+                    allFiles.add(enrichedDoc);
+                }
             }
         } catch(IOException e) {
             log.error("Failed to load markdown files.", e);
