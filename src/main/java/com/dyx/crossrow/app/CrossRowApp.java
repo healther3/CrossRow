@@ -35,6 +35,9 @@ public class CrossRowApp {
     @jakarta.annotation.Resource
     private Advisor ragAdvisor;
 
+    @jakarta.annotation.Resource
+    private Advisor ragCloudAdvisor;
+
     /**
      *  initalize the app(memory based)
      * @param dashScopeChatModel dashscope chat model
