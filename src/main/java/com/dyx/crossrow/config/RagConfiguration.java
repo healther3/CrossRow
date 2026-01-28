@@ -66,7 +66,7 @@ public class RagConfiguration {
         DocumentRetriever documentRetriever = VectorStoreDocumentRetriever.builder()
                 .vectorStore(vectorStore)
                 .similarityThreshold(0.5)
-                .topK(2)
+                .topK(5)
                 .build();
 
 //        增强召回率，扩展能捕获更多意图，会增加调用延迟并且消耗更多tokens
