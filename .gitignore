@@ -1,5 +1,6 @@
 ### CUSTOM ###
 application-local.yml
+docker-compose.override.yml
 tmp
 
 HELP.md
