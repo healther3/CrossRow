@@ -1,5 +1,0 @@
-services:
-  postgres:
-    environment:
-      # 在这里覆盖本地特有的账号密码
-      POSTGRES_PASSWORD: dyx1326022894
