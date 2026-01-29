@@ -74,25 +74,32 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-jdbc -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- Source: https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-markdown-document-reader -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-markdown-document-reader</artifactId>
-            <version>2.0.0-M2</version>
+            <version>1.1.0</version>
         </dependency>
 
         <!-- Source: https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-client-chat -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-client-chat</artifactId>
-            <version>2.0.0-M2</version>
+            <version>1.1.0</version>
         </dependency>
 
         <!-- Source: https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-starter-vector-store-pgvector -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
-            <version>2.0.0-M2</version>
+            <version>1.1.0</version>
             <scope>compile</scope>
         </dependency>
 
