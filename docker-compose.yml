@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg18
+    image: pgvector/pgvector:pg17
     container_name: crossrow-pgvector
     environment:
       POSTGRES_USER: postgres
