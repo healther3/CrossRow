@@ -30,6 +30,7 @@ public class CrossRowDocumentLoader {
      * Split by Q&A pairs (#### headers) to preserve semantic integrity
      * @return list of files
      */
+
     public List<Document> loadMarkDownFiles() {
         List<Document> allFiles = new ArrayList<>();
 
