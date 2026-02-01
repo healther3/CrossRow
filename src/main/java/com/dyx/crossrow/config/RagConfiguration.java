@@ -49,7 +49,7 @@ public class RagConfiguration {
 
     }
     @Bean
-    public Advisor ragAdvisor(VectorStore vectorStore, ChatClient.Builder chatClientBuilder) {
+    public Advisor ragAdvisor(VectorStore pgVectorStore, ChatClient.Builder chatClientBuilder) {
         QueryTransformer translationQueryTransformer = TranslationQueryTransformer.builder()
                 .chatClientBuilder(chatClientBuilder)
                 .targetLanguage("Chinese")
@@ -64,7 +64,7 @@ public class RagConfiguration {
                 .build();
 
         DocumentRetriever documentRetriever = VectorStoreDocumentRetriever.builder()
-                .vectorStore(vectorStore)
+                .vectorStore(pgVectorStore)
                 .similarityThreshold(0.5)
                 .topK(10)
                 .build();

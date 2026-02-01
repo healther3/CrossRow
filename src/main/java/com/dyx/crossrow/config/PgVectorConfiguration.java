@@ -3,6 +3,8 @@ package com.dyx.crossrow.config;
 
 import com.dyx.crossrow.rag.CrossRowDocumentLoader;
 import com.dyx.crossrow.rag.DocumentCountBatchingStrategy;
+import com.dyx.crossrow.rag.SimpleKeyWordEnricher;
+import jakarta.annotation.Resource;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -24,6 +26,9 @@ import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexT
 public class PgVectorConfiguration {
 //    @Autowired
 //    VectorStore vectorStore;
+    @Resource
+    private SimpleKeyWordEnricher simpleKeyWordEnricher;
+
     private static final int DASHSCOPE_MAX_BATCH_SIZE = 10;
 
     @Bean
@@ -45,6 +50,8 @@ public class PgVectorConfiguration {
         public ApplicationRunner documentLoader(VectorStore pgVectorStore, CrossRowDocumentLoader crossRowDocumentLoader) {
             return args -> {
                 List<Document> documents = crossRowDocumentLoader.loadMarkDownFiles();
+                List<Document> enrichedDocuments = simpleKeyWordEnricher.enrichDocuments(documents);
+                pgVectorStore.add(enrichedDocuments);
                     System.out.println("文档加载完成，共 " + documents.size() + " 条");
             };
         }
