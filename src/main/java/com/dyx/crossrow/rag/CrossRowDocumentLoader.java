@@ -83,7 +83,7 @@ public class CrossRowDocumentLoader {
         List<Document> qaPairs = new ArrayList<>();
         // 按 #### 分割，但保留分隔符
         String[] parts = content.split("(?=####\\s)");
-        
+
         for (String part : parts) {
             String trimmed = part.trim();
             if (trimmed.isEmpty() || trimmed.length() < 20) {
