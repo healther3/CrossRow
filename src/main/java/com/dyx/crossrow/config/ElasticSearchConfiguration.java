@@ -1,6 +1,7 @@
 package com.dyx.crossrow.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.InfoResponse;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
@@ -18,7 +19,7 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(ElasticsearchProperties.class)
-public class ElasticResearchConfiguration {
+public class ElasticSearchConfiguration {
     @Bean
     public RestClient restClient(ElasticsearchProperties properties) {
         HttpHost httpHost = new HttpHost(
@@ -33,6 +34,7 @@ public class ElasticResearchConfiguration {
         builder.setRequestConfigCallback(requestConfigBuilder -> requestConfigBuilder
                 .setConnectionRequestTimeout(properties.getConnectionTimeout())
                 .setSocketTimeout(properties.getSocketTimeout())
+                .setConnectTimeout(properties.getConnectionTimeout())
         );
         return builder.build();
     }
@@ -63,7 +65,9 @@ public class ElasticResearchConfiguration {
             try {
                 boolean connected = elasticsearchClient.ping().value();
                 if (connected) {
-                    log.info("Elasticsearch 连接成功");
+                    InfoResponse info = elasticsearchClient.info();
+                    log.info("Elasticsearch 集群名称: {}, 版本号: {}",
+                            info.clusterName(), info.version().number());
                 }
             } catch (Exception e) {
                 log.error("Elasticsearch 连接失败: {}", e.getMessage());
