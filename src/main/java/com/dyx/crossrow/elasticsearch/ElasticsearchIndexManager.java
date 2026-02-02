@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import co.elastic.clients.elasticsearch.indices.CreateIndexResponse;
 import com.dyx.crossrow.properties.ElasticsearchProperties;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,7 @@ public class ElasticsearchIndexManager {
     public void createIndex() throws IOException{
         String indexName = properties.getIndexName();
 
+        // lambda expression 调用多个builder最后build
         CreateIndexRequest request = CreateIndexRequest.of(builder -> builder
                 .index(indexName)
                 // 主分片为1用于开发环境；单节点挂在docker，副本为1
@@ -89,8 +91,9 @@ public class ElasticsearchIndexManager {
     }
 
     /**
-     * 确保索引存在（不存在则创建）
+     * 确保索引存在（不存在则创建） 启动后立即执行
      */
+    @PostConstruct
     public void ensureIndexExists() {
         try {
             if (!indexExists()) {
