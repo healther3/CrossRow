@@ -13,6 +13,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -37,6 +39,9 @@ public class CrossRowApp {
 
     @jakarta.annotation.Resource
     private Advisor ragCloudAdvisor;
+    @Qualifier("hybridRagAdvisor")
+    @Autowired
+    private Advisor hybridRagAdvisor;
 
     /**
      *  initalize the app(memory based)
@@ -134,7 +139,7 @@ public class CrossRowApp {
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
-                .advisors(ragAdvisor)
+                .advisors(hybridRagAdvisor)
 //                .advisors(QuestionAnswerAdvisor.builder(vectorStore)
 //                        .searchRequest(SearchRequest.builder()
 //                                .topK(2)

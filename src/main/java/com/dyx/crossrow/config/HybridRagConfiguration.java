@@ -132,8 +132,9 @@ public class HybridRagConfiguration {
         // 构建 Advisor
         return RetrievalAugmentationAdvisor.builder()
                 .queryTransformers(compressionQueryTransformer, rewriteQureryTransformer)
-                .documentRetriever(hybridRetriever)  // 🔑 使用混合检索器
+                .documentRetriever(hybridRetriever)  // 使用混合检索器
                 .queryAugmenter(queryAugmenter)
                 .build();
     }
+
 }
