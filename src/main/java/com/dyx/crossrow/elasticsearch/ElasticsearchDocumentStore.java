@@ -20,13 +20,12 @@ import java.util.stream.IntStream;
 @Component
 public class ElasticsearchDocumentStore {
 
-    private final ElasticsearchIndexManager elasticsearchIndexManager;
     private final ElasticsearchClient esClient;
     private final EmbeddingModel embeddingModel;
     private final ElasticsearchProperties properties;
 
+
     public ElasticsearchDocumentStore(ElasticsearchIndexManager elasticsearchIndexManager, ElasticsearchClient esClient, EmbeddingModel embeddingModel, ElasticsearchProperties properties) {
-        this.elasticsearchIndexManager = elasticsearchIndexManager;
         this.esClient = esClient;
         this.embeddingModel = embeddingModel;
         this.properties = properties;
@@ -36,35 +35,38 @@ public class ElasticsearchDocumentStore {
      * 批量存储文档
      */
     public void storeAll(List<Document> documents) throws IOException {
-        // get text content
-        List<String> contents = documents.stream()
-                .map(Document::getText)
-                .toList();
-        //embedding text into 1024 dim vectors
-        List<float[]> embeddings = embeddingModel.embed(contents);
+        int MAX_BATCH_SIZE = 10;
         //create bulk request
         BulkRequest.Builder bulkBuilder = new BulkRequest.Builder();
-
-        for (int i = 0; i < documents.size(); i++) {
-            Document doc = documents.get(i);
-            float[] embedding = embeddings.get(i);
-            // convert float array into list
-            List<Float> floatList = IntStream.range(0, embedding.length)
-                    .mapToObj(j -> embedding[j])
+        // get text content
+        for (int i = 0; i < documents.size(); i += MAX_BATCH_SIZE) {
+            int end = Math.min(i + MAX_BATCH_SIZE, documents.size());
+            List<Document> batchDocs = documents.subList(i, end);
+            // batch documents size should be less than 25
+            List<String> contents = batchDocs.stream()
+                    .map(Document::getText)
                     .toList();
+            //embedding text into 1024 dim vectors
+            List<float[]> embeddings = embeddingModel.embed(contents);
 
-            // 转换为自定义文件格式
-            CrossRowDocument record = convertToCrossRowDocument(doc, floatList);
-
-            // 添加到 Bulk 请求
-            bulkBuilder.operations(op -> op
-                    .index(idx -> idx
-                            .index(properties.getIndexName())
-                            .id(record.getId())
-                            .document(record)
-                    )
-            );
-
+            for (int j = 0; j < batchDocs.size(); j++) {
+                Document doc = batchDocs.get(j);
+                float[] embedding = embeddings.get(j);
+                // convert float array into list
+                List<Float> floatList = IntStream.range(0, embedding.length)
+                        .mapToObj(k -> embedding[k])
+                        .toList();
+                // 转换为自定义文件格式
+                CrossRowDocument record = convertToCrossRowDocument(doc, floatList);
+                // 添加到 Bulk 请求
+                bulkBuilder.operations(op -> op
+                        .index(idx -> idx
+                                .index(properties.getIndexName())
+                                .id(record.getId())
+                                .document(record)
+                        )
+                );
+            }
         }
 
         // 3. 执行批量索引
