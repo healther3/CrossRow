@@ -10,7 +10,10 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -27,15 +30,6 @@ public class ElasticsearchDocumentStore {
         this.esClient = esClient;
         this.embeddingModel = embeddingModel;
         this.properties = properties;
-    }
-
-    /**
-     * 存储单个文档
-     */
-    public void store(Document document) {
-        // 1. 生成向量
-        // 2. 转换为 DocumentRecord
-        // 3. 索引到 ES
     }
 
     /**
@@ -60,7 +54,7 @@ public class ElasticsearchDocumentStore {
                     .toList();
 
             // 转换为自定义文件格式
-            CrossRowDocument record = convertToRecord(doc, floatList);
+            CrossRowDocument record = convertToCrossRowDocument(doc, floatList);
 
             // 添加到 Bulk 请求
             bulkBuilder.operations(op -> op
@@ -86,9 +80,26 @@ public class ElasticsearchDocumentStore {
     }
 
         /**
-         * 将 Spring AI Document 转换为 ES DocumentRecord
+         * 将 Spring AI Document 转换为 ES cross-row
          */
-        private CrossRowDocument convertToRecord (Document document, List<Float> embedding){
-            // 转换逻辑
+        private CrossRowDocument convertToCrossRowDocument (Document document, List<Float> embedding){
+            List<String> keywordList = Collections.emptyList();
+
+            Object keywords = document.getMetadata().get("excerpt_keywords");
+            if (keywords instanceof List<?> list) {  // Java 16+ 模式匹配
+                keywordList = list.stream()
+                        .filter(String.class::isInstance)
+                        .map(String.class::cast)
+                        .toList();
+            }
+
+            return CrossRowDocument.builder()
+                    .id(UUID.randomUUID().toString())
+                    .content(document.getText())
+                    .embedding(embedding)
+                    .keywords(keywordList)
+                    .metadata(document.getMetadata())
+                    .createdAt(Instant.now())
+                    .build();
         }
 }
