@@ -26,7 +26,7 @@ services:
       retries: 3
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.4.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
     container_name: crossrow-elasticsearch
     environment:
       - node.name=es01
@@ -50,7 +50,7 @@ services:
     command: >
       sh -c "
         if [ ! -d /usr/share/elasticsearch/plugins/analysis-ik ]; then
-          bin/elasticsearch-plugin install --batch https://get.infini.cloud/elasticsearch/analysis-ik/8.4.1
+          bin/elasticsearch-plugin install --batch https://get.infini.cloud/elasticsearch/analysis-ik/8.17.0
         fi &&
         exec /usr/share/elasticsearch/bin/elasticsearch
       "
