@@ -5,6 +5,7 @@ import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.dyx.crossrow.properties.ElasticsearchProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Component;
@@ -74,8 +75,12 @@ public class ElasticsearchDocumentStore {
 
         // 4. 检查结果
         if (response.errors()) {
-            log.error("批量索引存在错误");
-            // 处理错误...
+            log.error("批量索引存在错误，详细信息：");
+            response.items().forEach(item -> {
+                if (item.error() != null) {
+                    log.error("  文档 {} 索引失败: {}", item.id(), item.error().reason());
+                }
+            });
         } else {
             log.info("成功索引 {} 个文档", documents.size());
         }
@@ -88,15 +93,26 @@ public class ElasticsearchDocumentStore {
             List<String> keywordList = Collections.emptyList();
 
             Object keywords = document.getMetadata().get("excerpt_keywords");
-            if (keywords instanceof List<?> list) {  // Java 16+ 模式匹配
+            if (keywords instanceof List<?> list) {
                 keywordList = list.stream()
                         .filter(String.class::isInstance)
                         .map(String.class::cast)
                         .toList();
             }
 
+            Object filenameObj = document.getMetadata().get("filename");
+
+            String filename = "";
+            if (filenameObj instanceof String s) {
+                filename = s; // 已经是 String 类型了
+            } else {
+                filename = String.valueOf(filenameObj); // 强制转成字符串形式
+            }
+
+            // 用文件名+内容的前100字符生成唯一ID，避免同文件多个chunk互相覆盖
+            String uniqueContent = filename + document.getText().substring(0, Math.min(100, document.getText().length()));
             return CrossRowDocument.builder()
-                    .id(UUID.randomUUID().toString())
+                    .id(DigestUtils.md5Hex(uniqueContent))
                     .content(document.getText())
                     .embedding(embedding)
                     .keywords(keywordList)

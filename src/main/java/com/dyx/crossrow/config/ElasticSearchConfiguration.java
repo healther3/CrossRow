@@ -6,7 +6,10 @@ import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.dyx.crossrow.properties.ElasticsearchProperties;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
@@ -44,6 +47,8 @@ public class ElasticSearchConfiguration {
     public ElasticsearchTransport elasticsearchTransport(RestClient restClient) {
         // jackson json 处理器 - 传输
         ObjectMapper objectMapper = new ObjectMapper();
+        // 处理时间类型
+        objectMapper.registerModule(new JavaTimeModule());
 
         //json 传输
         return new RestClientTransport(

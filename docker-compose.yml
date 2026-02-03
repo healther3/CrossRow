@@ -32,13 +32,12 @@ services:
       - node.name=es01
       - cluster.name=es-docker-cluster
       - discovery.type=single-node
-      # 为了方便开发，暂时关闭安全校验（SSL/用户认证）
-      # 如果以后想在简历里写"安全性优化"，可以再开启它
+      # SSL/用户认证
       - xpack.security.enabled=false
       - xpack.security.http.ssl.enabled=false
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # 限制内存，防止占满宿主机
-    # 限制进程可以锁定的内存量。soft/hard: -1 代表无限制。
+    # 限制进程可以锁定的内存量。soft/hard: -1 = 无限制。
     ulimits:
       memlock:
         soft: -1
