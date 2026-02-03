@@ -1,16 +1,15 @@
 package com.dyx.crossrow.config;
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeAgentApi;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetriever;
 import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrieverOptions;
+import com.dyx.crossrow.retriever.HybridDocumentRetriever;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.generation.augmentation.QueryAugmenter;
-import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpander;
 import org.springframework.ai.rag.preretrieval.query.transformation.CompressionQueryTransformer;
 import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
@@ -23,7 +22,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class RagConfiguration {
+public class HybridRagConfiguration {
     @Value("${spring.ai.dashscope.api-key}")
     private  String dashscopeApiKey;
 
@@ -94,6 +93,46 @@ public class RagConfiguration {
                         compressionQueryTransformer,
                         rewriteQureryTransformer)
                 .documentRetriever(documentRetriever)
+                .queryAugmenter(queryAugmenter)
+                .build();
+    }
+
+    /**
+     *  混个检索RAG advisor -> knn向量查询+BM25，ik分词检索
+     * @param hybridRetriever 混合检索器
+     * @return  混合检索advisor
+     */
+    @Bean
+    public Advisor hybridRagAdvisor(HybridDocumentRetriever hybridRetriever, ChatClient.Builder chatClientBuilder) {
+        // 聚合转换器
+        QueryTransformer compressionQueryTransformer = CompressionQueryTransformer.builder()
+                .chatClientBuilder(chatClientBuilder)
+                .build();
+        // 重写转换器
+        QueryTransformer rewriteQureryTransformer = RewriteQueryTransformer.builder()
+                .chatClientBuilder(chatClientBuilder)
+                .build();
+        //自定义prompt template
+        PromptTemplate promptTemplate = new PromptTemplate("""
+                下面是一些会帮助回答用户问题的信息
+                ---------------------
+                {context}
+                ---------------------
+                结合这些可以帮助回答的上下文信息，给出用户问题分析和解决方案.
+                *回答时请注明信息来源，例如:"根据存在主义哲学观念，..."*
+                *不要在回答中写出文件名*
+                问题: {query}
+                回答:
+                """);
+
+        QueryAugmenter queryAugmenter = ContextualQueryAugmenter.builder()
+                .promptTemplate(promptTemplate)
+                .build();
+
+        // 构建 Advisor
+        return RetrievalAugmentationAdvisor.builder()
+                .queryTransformers(compressionQueryTransformer, rewriteQureryTransformer)
+                .documentRetriever(hybridRetriever)  // 🔑 使用混合检索器
                 .queryAugmenter(queryAugmenter)
                 .build();
     }

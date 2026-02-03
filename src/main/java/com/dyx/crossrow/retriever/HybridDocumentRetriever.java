@@ -3,6 +3,7 @@ package com.dyx.crossrow.retriever;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.dyx.crossrow.elasticsearch.CrossRowDocument;
 import com.dyx.crossrow.properties.ElasticsearchProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,7 @@ public class HybridDocumentRetriever implements DocumentRetriever {
     private final ElasticsearchProperties properties;
 
     // 检索参数
-    private int topK = 10;
-    private int numCandidates = 100;  // KNN 候选数量
-    private int rankConstant = 60;     // RRF 常数
+    private final int topK = 10;
 
     public HybridDocumentRetriever(ElasticsearchClient esClient, EmbeddingModel embeddingModel, ElasticsearchProperties properties) {
         this.esClient = esClient;
@@ -93,9 +92,22 @@ public class HybridDocumentRetriever implements DocumentRetriever {
 
     }
 
+    // 主方法
     private List<Document> convertToDocuments(SearchResponse<CrossRowDocument> response) {
+        return response.hits().hits().stream()
+                .map(this::mapToSpringAIDocument)
+                .toList();
+    }
 
-
+    // 专门负责转换的私有方法
+    private Document mapToSpringAIDocument(Hit<CrossRowDocument> hit) {
+        CrossRowDocument record = hit.source();
+        return Document.builder()
+                .id(record.getId())
+                .text(record.getContent())
+                .metadata(record.getMetadata())
+                .score(hit.score())
+                .build();
     }
 
 }
