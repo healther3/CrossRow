@@ -38,13 +38,14 @@ public class HybridDocumentRetriever implements DocumentRetriever {
     public List<Document> retrieve(Query query) {
         try {
             String queryText = query.text();
+            log.info(" 开始检索，查询文本: {}", queryText);
 
             // 1. 将查询文本向量化
             float[] queryVector = embeddingModel.embed(queryText);
             List<Float> queryVectorList = IntStream.range(0, queryVector.length)
                     .mapToObj(j -> queryVector[j])
                     .toList();
-
+            log.info(" 向量化完成，维度: {}", queryVector.length);
 
             // 2. 构建混合查询
             SearchRequest searchRequest = buildHybridSearchRequest(queryText, queryVectorList);
@@ -56,10 +57,20 @@ public class HybridDocumentRetriever implements DocumentRetriever {
             );
 
             // 4. 转换结果
-            return convertToDocuments(response);
+            List<Document> results = convertToDocuments(response);
+            log.info(" 检索完成，命中 {} 条文档", results.size());
+            
+            if (!results.isEmpty()) {
+                log.info(" 第一条结果预览: {}", results.get(0).getText().substring(0, Math.min(100, results.get(0).getText().length())));
+            }
+            
+            return results;
 
         } catch (IOException e) {
-            log.error("混合检索失败: {}", e.getMessage());
+            log.error(" 混合检索失败: {}", e.getMessage(), e);
+            return List.of();
+        } catch (Exception e) {
+            log.error(" 检索时发生异常: {}", e.getMessage(), e);
             return List.of();
         }
     }
@@ -82,14 +93,15 @@ public class HybridDocumentRetriever implements DocumentRetriever {
                         .k(50)
                         .numCandidates(100)
                 )
-                // RRF 融合两种查询方式
-                .rank(r -> r
-                        .rrf(rrf -> rrf
-                                .rankConstant(60L)
-                                .windowSize(100L)
-                        )
-                )
+                // RRF 融合两种查询方式 -> 付费功能
+//                .rank(r -> r
+//                        .rrf(rrf -> rrf
+//                                .rankConstant(60L)
+//                                .rankWindowSize(100L)
+//                        )
+//                )
         );
+
 
     }
 
