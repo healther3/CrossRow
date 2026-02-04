@@ -17,7 +17,7 @@ The system is designed to accept the user's described reality as absolute truth 
 
 ### Completed
 
-- **LLM Integration**: Chat with DashScope (Alibaba Cloud AI) Qwen models
+- **LLM Integration**: Chat with Google Gemini models via Vertex AI
 - **Conversation Memory**: Persistent chat history via Redis
 - **RAG Pipeline**: Retrieve relevant philosophical concepts to augment responses
 - **Dual Vector Store Support**:
@@ -50,9 +50,9 @@ The system is designed to accept the user's described reality as absolute truth 
 | Component | Technology |
 |-----------|------------|
 | Framework | Spring Boot 3.2.4 |
-| AI Framework | Spring AI + Spring AI Alibaba |
-| LLM Provider | DashScope (Qwen models) |
-| Embedding Model | DashScope text-embedding-v3 (1024 dims) |
+| AI Framework | Spring AI 1.1.0 |
+| LLM Provider | Google Vertex AI (Gemini 2.0 Flash) |
+| Embedding Model | Vertex AI text-embedding-005 (768 dims) |
 | Vector Store | PostgreSQL + PgVector / Elasticsearch 8.17 |
 | Chat Memory | Redis |
 | Containerization | Docker Compose |
@@ -91,6 +91,7 @@ src/main/java/com/dyx/crossrow/
 │   ├── ElasticSearchConfiguration.java
 │   ├── HybridRagConfiguration.java
 │   ├── PgVectorConfiguration.java
+│   ├── VertexAiConfiguration.java
 │   └── ...
 ├── elasticsearch/          # Elasticsearch integration
 │   ├── CrossRowDocument.java
@@ -110,7 +111,8 @@ src/main/java/com/dyx/crossrow/
 
 - Java 21
 - Docker & Docker Compose
-- DashScope API Key
+- Google Cloud Project with Vertex AI API enabled
+- GCP Service Account Key (JSON)
 
 ### Setup
 
@@ -125,17 +127,46 @@ src/main/java/com/dyx/crossrow/
    docker-compose up -d
    ```
 
-3. **Configure API keys**
+3. **Configure Google Cloud credentials**
    
-   Create `application-local.yml` or set environment variables:
-   ```yaml
-   spring:
-     ai:
-       dashscope:
-         api-key: your-dashscope-api-key
+   Option A: Place your service account key file:
+   ```bash
+   mkdir -p config
+   cp /path/to/your-service-account-key.json config/gcp-key.json
+   ```
+   
+   Option B: Use Application Default Credentials:
+   ```bash
+   gcloud auth application-default login
    ```
 
-4. **Run the application**
+4. **Configure application**
+   
+   Create `src/main/resources/application-local.yml`:
+   ```yaml
+   gcp:
+     credentials:
+       location: file:./config/gcp-key.json
+   
+   spring:
+     ai:
+       vertex:
+         ai:
+           gemini:
+             project-id: your-gcp-project-id
+             location: us-central1
+             chat:
+               options:
+                 model: gemini-2.0-flash
+           embedding:
+             project-id: your-gcp-project-id
+             location: us-central1
+             text:
+               options:
+                 model: text-embedding-005
+   ```
+
+5. **Run the application**
    ```bash
    ./mvnw spring-boot:run
    ```
@@ -158,9 +189,13 @@ src/main/java/com/dyx/crossrow/
 
 ## Configuration
 
-Key configuration properties in `application.yml`:
+Key configuration properties in `application-local.yml`:
 
 ```yaml
+gcp:
+  credentials:
+    location: file:./config/gcp-key.json
+
 spring:
   elasticsearch:
     host: localhost
@@ -168,8 +203,14 @@ spring:
     index-name: philosophy_docs
     
   ai:
-    dashscope:
-      api-key: ${DASHSCOPE_API_KEY}
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GOOGLE_CLOUD_PROJECT_ID}
+          location: us-central1
+        embedding:
+          project-id: ${GOOGLE_CLOUD_PROJECT_ID}
+          location: us-central1
 ```
 
 ## Development Notes
@@ -177,8 +218,8 @@ spring:
 ### Hybrid Search Implementation
 
 The system uses Elasticsearch's bool query with should clauses to combine:
-- **BM25**: Traditional keyword matching on `content` field
-- **KNN**: Dense vector similarity on `embedding` field (1024 dimensions)
+- **BM25**: Traditional keyword matching on `content` field with IK analyzer (Chinese)
+- **KNN**: Dense vector similarity on `embedding` field (768 dimensions)
 
 Note: RRF (Reciprocal Rank Fusion) requires an Elasticsearch paid license, so the current implementation uses score combination via bool should.
 
@@ -186,8 +227,15 @@ Note: RRF (Reciprocal Rank Fusion) requires an Elasticsearch paid license, so th
 
 ```
 Markdown Files ──▶ DocumentLoader ──▶ KeywordEnricher ──▶ EmbeddingModel ──▶ Elasticsearch
-                   (chunk by Q&A)    (AI extraction)     (vectorize)        (index)
+                   (chunk by Q&A)    (AI extraction)     (Vertex AI)        (index)
 ```
+
+### Migration Notes
+
+This project was migrated from DashScope (Alibaba Cloud) to Google Vertex AI (Gemini). Key changes:
+- Embedding dimensions changed from 1024 to 768
+- Vector store tables need to be recreated after migration
+- GCP service account credentials required
 
 ## License
 
@@ -196,5 +244,5 @@ Markdown Files ──▶ DocumentLoader ──▶ KeywordEnricher ──▶ Embe
 ## Acknowledgments
 
 - [Spring AI](https://docs.spring.io/spring-ai/reference/)
-- [Spring AI Alibaba](https://github.com/alibaba/spring-ai-alibaba)
-- [DashScope](https://dashscope.aliyun.com/)
+- [Google Vertex AI](https://cloud.google.com/vertex-ai)
+- [Gemini API](https://ai.google.dev/)
