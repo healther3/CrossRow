@@ -29,12 +29,13 @@ public class PgVectorConfiguration {
     @Resource
     private SimpleKeyWordEnricher simpleKeyWordEnricher;
 
-    private static final int DASHSCOPE_MAX_BATCH_SIZE = 10;
+    private static final int GEMINI_MAX_BATCH_SIZE = 10;
 
     @Bean
-    public VectorStore pgVectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel dashscopeEmbeddingModel, CrossRowDocumentLoader crossRowDocumentLoader) {
-        return   PgVectorStore.builder(jdbcTemplate, dashscopeEmbeddingModel)
-                .dimensions(1024)
+    public VectorStore pgVectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel, CrossRowDocumentLoader crossRowDocumentLoader) {
+        // Vertex AI text-embedding-005 维度为 768
+        return   PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                .dimensions(768)
                 .distanceType(COSINE_DISTANCE)
                 .indexType(HNSW)
                 .initializeSchema(true)

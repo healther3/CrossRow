@@ -13,8 +13,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -34,20 +32,17 @@ public class CrossRowApp {
     @jakarta.annotation.Resource
     private VectorStore vectorStore;
 
-    @jakarta.annotation.Resource
+    @jakarta.annotation.Resource(name = "ragAdvisor")
     private Advisor ragAdvisor;
 
-    @jakarta.annotation.Resource
-    private Advisor ragCloudAdvisor;
-    @Qualifier("hybridRagAdvisor")
-    @Autowired
+    @jakarta.annotation.Resource(name = "hybridRagAdvisor")
     private Advisor hybridRagAdvisor;
 
     /**
      *  initalize the app(memory based)
-     * @param dashScopeChatModel dashscope chat model
+     * @param chatModel Gemini chat model
      */
-    public CrossRowApp(ChatModel dashScopeChatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
+    public CrossRowApp(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
 
         // get template from resource
             this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
@@ -63,7 +58,7 @@ public class CrossRowApp {
 //                .maxMessages(10)
 //                .build();
 
-        chatClient = ChatClient.builder(dashScopeChatModel)
+        chatClient = ChatClient.builder(chatModel)
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
                         new SimpleAuthAdvisor(),

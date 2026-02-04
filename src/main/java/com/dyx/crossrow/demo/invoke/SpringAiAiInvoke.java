@@ -19,11 +19,11 @@ public class SpringAiAiInvoke implements CommandLineRunner {
 //            )
 //            .build();
     @Resource
-    private ChatModel dashscopeChatModel;
+    private ChatModel chatModel;
 
     @Override
     public void run(String... args) throws Exception {
-        AssistantMessage assistantMessage =  dashscopeChatModel.call(new Prompt("你好"))
+        AssistantMessage assistantMessage = chatModel.call(new Prompt("你好"))
                 .getResult()
                 .getOutput();
         System.out.println(assistantMessage.getText());

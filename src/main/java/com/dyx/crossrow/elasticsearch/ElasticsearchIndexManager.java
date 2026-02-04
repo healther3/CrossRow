@@ -15,7 +15,7 @@ import java.io.IOException;
 public class ElasticsearchIndexManager {
     private final ElasticsearchClient esClient;
     private final ElasticsearchProperties properties;
-    private static final int VECTOR_DIMENSIONS = 1024;
+    private static final int VECTOR_DIMENSIONS = 768;
 
     public ElasticsearchIndexManager(ElasticsearchClient esClient, ElasticsearchProperties properties) {
         this.esClient = esClient;

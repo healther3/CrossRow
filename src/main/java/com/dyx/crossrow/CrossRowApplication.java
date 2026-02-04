@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class CrossRowApplication {
 
     public static void main(String[] args) {
+        System.setProperty("GOOGLE_APPLICATION_CREDENTIALS", "./config/gcp-key.json");
         SpringApplication.run(CrossRowApplication.class, args);
     }
 

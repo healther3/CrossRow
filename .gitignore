@@ -2,6 +2,7 @@
 application-local.yml
 docker-compose.override.yml
 tmp
+*.json
 
 HELP.md
 target/

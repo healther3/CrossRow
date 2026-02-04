@@ -1,8 +1,5 @@
 package com.dyx.crossrow.config;
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetriever;
-import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrieverOptions;
 import com.dyx.crossrow.retriever.HybridDocumentRetriever;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
@@ -17,36 +14,12 @@ import org.springframework.ai.rag.preretrieval.query.transformation.TranslationQ
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class HybridRagConfiguration {
-    @Value("${spring.ai.dashscope.api-key}")
-    private  String dashscopeApiKey;
 
-    /**
-     * ragAdvisor that use cloud data base. Based on dashscope and Spring
-     * AI alibaba
-     * @return arg cloud advisor
-     */
-    @Bean
-    public Advisor ragCloudAdvisor() {
-        DashScopeApi dashScopeApi = DashScopeApi.builder()
-                .apiKey(dashscopeApiKey)
-                .build();
-        final String KNOWLEDGE_INDEX = "哲学观念";
-        DocumentRetriever dashScopeDocumentRetriever = new DashScopeDocumentRetriever(dashScopeApi,
-                DashScopeDocumentRetrieverOptions.builder()
-                        .indexName(KNOWLEDGE_INDEX)
-                        .build());
-
-        return RetrievalAugmentationAdvisor.builder()
-                .documentRetriever(dashScopeDocumentRetriever)
-                .build();
-
-    }
     @Bean
     public Advisor ragAdvisor(VectorStore pgVectorStore, ChatClient.Builder chatClientBuilder) {
         QueryTransformer translationQueryTransformer = TranslationQueryTransformer.builder()

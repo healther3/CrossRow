@@ -24,7 +24,7 @@ public class DocumentIndexer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
 
-        indexManager.deleteIndex();
+        // indexManager.deleteIndex();
 
         log.info(" 开始启动自动化文档索引流程...");
 
