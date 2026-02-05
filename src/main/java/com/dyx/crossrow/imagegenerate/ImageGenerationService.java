@@ -1,56 +1,68 @@
 package com.dyx.crossrow.imagegenerate;
 
-import com.google.cloud.aiplatform.v1.Modality;
+import com.dyx.crossrow.properties.ImageModelProperties;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.ImageConfig;
 import com.google.genai.types.Part;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-@Service
+@Component
 public class ImageGenerationService {
-    public class TextToImage {
+    private final Client genAiClient;
+    private final ImageModelProperties imageModelProperties;
+
+    public ImageGenerationService(Client genAiClient, ImageModelProperties imageModelProperties) {
+        this.genAiClient = genAiClient;
+        this.imageModelProperties = imageModelProperties;
+    }
         public String generateImage(String prompt) {
-            // 1. 初始化客户端 (建议做成 Bean 单例，不要每次请求都 new)
-            try (Client client = new Client()) {
+            GenerateContentConfig config = GenerateContentConfig.builder()
+                    .responseModalities("TEXT", "IMAGE")
+                    .imageConfig(ImageConfig.builder()
+                            .aspectRatio(imageModelProperties.getAspectRatio())
+                            .imageSize(imageModelProperties.getImageSize())
+                            .build())
+                    .build();
 
-                // 2. 配置：明确要求返回 IMAGE
-                GenerateContentConfig config = GenerateContentConfig.builder()
-                        .responseModalities("TEXT", "IMAGE")
-                        .build();
+            GenerateContentResponse response = genAiClient.models.generateContent(
+                    imageModelProperties.getModel(),
+                    prompt,
+                    config
+            );
 
-                // 3. 调用 Gemini 2.5 Flash Image
-                GenerateContentResponse response = client.models.generateContent(
-                        "gemini-2.5-flash-image",
-                        prompt,
-                        config
-                );
-
-                // 4. 解析结果并上传
-                for (Part part : response.parts()) {
-                    // 检查是否有二进制图片数据
-                    if (part.text().isPresent()) {
-                        System.out.println(part.text().get());
-                    } else if(part.inlineData().isPresent()) {
-                        byte[] imageBytes = part.inlineData().get().data().get();
-                        // 关键：这里不要直接保存文件，而是上传到对象存储或返回 URL
-                       // return uploadToStorage(imageBytes);
+            for (Part part : response.parts()) {
+                if (part.inlineData().isPresent()) {
+                    var blob = part.inlineData().get();
+                    if (blob.data().isPresent()) {
+                        return saveImage(blob.data().get());
                     }
                 }
-                throw new RuntimeException("生成失败，未收到图片数据");
-            } catch (Exception e) {
-                throw new RuntimeException("生图服务异常: " + e.getMessage());
             }
+            return null;
         }
-
-//        private String uploadToStorage(byte[] data) {
-//            // 模拟上传，实际请接入 MinIO 或 Google Cloud Storage
-//            String fileName = "gen_" + UUID.randomUUID() + ".png";
-//            // Files.write(Paths.get("static/images/" + fileName), data);
-//            return "http://localhost:8080/images/" + fileName;
-//        }
+    private String saveImage(byte[] data) {
+        try {
+            // 检查路径
+            Path dir = Paths.get(imageModelProperties.getSavePath());
+            if (!Files.exists(dir)) {
+                Files.createDirectories(dir);
+            }
+            // 创建唯一路径
+            String fileName = "gemini_" + System.currentTimeMillis() + ".png";
+            Path filePath = dir.resolve(fileName);
+            //保存
+            Files.write(filePath, data);
+            return filePath.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("图片保存失败", e);
+        }
     }
 }

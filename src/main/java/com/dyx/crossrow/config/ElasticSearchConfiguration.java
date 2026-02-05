@@ -65,6 +65,7 @@ public class ElasticSearchConfiguration {
 
     // elastic search 客户端初始化检查
     @Bean
+    @org.springframework.context.annotation.Profile("!test")  // 测试时不运行
     public ApplicationRunner elasticSearchClientTest(ElasticsearchClient elasticsearchClient){
         return args -> {
             try {

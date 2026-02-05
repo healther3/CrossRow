@@ -48,6 +48,7 @@ public class PgVectorConfiguration {
     }
 
         @Bean
+        @org.springframework.context.annotation.Profile("!test")  // 测试时不运行
         public ApplicationRunner documentLoader(VectorStore pgVectorStore, CrossRowDocumentLoader crossRowDocumentLoader) {
             return args -> {
                 List<Document> documents = crossRowDocumentLoader.loadMarkDownFiles();

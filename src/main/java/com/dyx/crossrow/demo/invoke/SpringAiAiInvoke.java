@@ -8,9 +8,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 /**
- *  Spring Ai
+ *  Spring Ai Demo - 仅用于演示
  */
 @Component
+@org.springframework.context.annotation.Profile("!test")  // 测试时不运行
 public class SpringAiAiInvoke implements CommandLineRunner {
 //    var chatClient = ChatClient.builder(chatModel)
 //            .defaultAdvisors(

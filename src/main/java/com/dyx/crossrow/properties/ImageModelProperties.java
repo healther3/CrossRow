@@ -13,7 +13,6 @@ import org.springframework.validation.annotation.Validated;
 @Data
 @ConfigurationProperties(prefix = "app.image-model")
 @Validated
-@Component
 public class ImageModelProperties {
 
     /**
@@ -48,12 +47,13 @@ public class ImageModelProperties {
     private String imageSize = "1K";
 
     /**
-     * 生成图片保存目录
-     */
-    private String outputDir = "generated-images";
-
-    /**
      * 是否启用 Google Search Grounding (仅 Pro 版支持)
      */
     private boolean googleSearchGrounding = false;
+
+    /**
+     *  保存路径
+     */
+    private String savePath = "F:/AI-Agent/CrossRow/generated-images";
+
 }

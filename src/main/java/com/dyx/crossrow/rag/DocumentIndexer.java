@@ -14,6 +14,7 @@ import java.util.List;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!test")  // 测试时不运行
 public class DocumentIndexer implements ApplicationRunner {
 
     private final ElasticsearchDocumentStore documentStore;

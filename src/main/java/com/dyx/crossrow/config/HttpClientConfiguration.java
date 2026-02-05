@@ -10,7 +10,7 @@ import java.time.Duration;
 @Configuration
 public class HttpClientConfiguration {
 
-    private static final int TIMEOUT_MS = 300000;  // 5分钟 = 300000毫秒
+    private static final int TIMEOUT_MS = 300000;
 
     @Bean
     public RestClient.Builder restClientBuilder() {
