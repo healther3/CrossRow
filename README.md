@@ -34,6 +34,7 @@ The system is designed to accept the user's described reality as absolute truth 
 ### Planned
 
 - [ ] Agent framework with tool calling
+- [ ] Image generation (Nano Banana)
 - [ ] MCP (Model Context Protocol) integration
 - [ ] Full-stack web interface
 - [ ] Multi-turn reasoning chains
@@ -56,23 +57,13 @@ The system is designed to accept the user's described reality as absolute truth 
 | Vector Store | PostgreSQL + PgVector / Elasticsearch 8.17 |
 | Chat Memory | Redis |
 | Containerization | Docker Compose |
+| Java Version | 21 |
 
 ## Knowledge Base
 
 The RAG system is powered by a curated collection of philosophical frameworks:
 
-- Existentialism
-- Stoicism
-- Buddhism
-- Confucianism
-- Taoism
-- Epicureanism
-- Kantianism
-- Pragmatism
-- Pessimism
-- Post-modernism
-- Transhumanism
-- Will to Power (Nietzsche)
+Existentialism, Stoicism, Buddhism, Confucianism, Taoism, Epicureanism, Kantianism, Pragmatism, Pessimism, Post-modernism, Transhumanism, Will to Power (Nietzsche)
 
 ## Project Structure
 
@@ -157,7 +148,7 @@ src/main/java/com/dyx/crossrow/
              location: us-central1
              chat:
                options:
-                 model: gemini-2.0-flash
+                 model: gemini-2.5-flash
            embedding:
              project-id: your-gcp-project-id
              location: us-central1
