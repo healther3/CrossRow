@@ -13,6 +13,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+import org.springframework.ai.vertexai.gemini.api.VertexAiGeminiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -129,8 +131,13 @@ public class CrossRowApp {
      * @return ai response
      */
     public String doChatWithRag(String message, String chatId, String userId) {
+        VertexAiGeminiChatOptions options = VertexAiGeminiChatOptions.builder()
+                .googleSearchRetrieval(true)
+                .build();
+
         ChatClientResponse chatClientResponse = chatClient
                 .prompt()
+                .options(options)
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
