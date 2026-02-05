@@ -182,6 +182,14 @@
             <artifactId>google-cloud-discoveryengine</artifactId>
         </dependency>
 
+        <!-- Source: https://mvnrepository.com/artifact/com.google.genai/google-genai -->
+        <dependency>
+            <groupId>com.google.genai</groupId>
+            <artifactId>google-genai</artifactId>
+            <version>1.37.0</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- Langchang4j dependency -->
 <!--        <dependency>-->
 <!--            <groupId>dev.langchain4j</groupId>-->
