@@ -7,13 +7,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 @SpringBootTest
 class CrossRowAppTest {
 
     @Resource
-    private CrossRowApp crossRowApp;
+    private ChatService crossRowApp;
     @Test
     void testChat() {
         String chatId = UUID.randomUUID().toString();
@@ -36,7 +34,7 @@ class CrossRowAppTest {
     void doChatReport() {
         String chatId = UUID.randomUUID().toString();
         String message = "我每天上学很累，家里人对我要求太高";
-        CrossRowApp.PainReport answer = crossRowApp.doChatReport(message, chatId, "admin");
+        ChatService.PainReport answer = crossRowApp.doChatReport(message, chatId, "admin");
         Assertions.assertNotNull(answer);
     }
 

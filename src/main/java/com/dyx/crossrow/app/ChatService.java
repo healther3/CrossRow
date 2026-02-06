@@ -14,7 +14,6 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
-import org.springframework.ai.vertexai.gemini.api.VertexAiGeminiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -26,7 +25,7 @@ import java.util.List;
 
 @Component
 @Slf4j
-public class CrossRowApp {
+public class ChatService {
 
     private final ChatClient chatClient;
     private final SystemPromptTemplate systemPromptTemplate;
@@ -44,7 +43,7 @@ public class CrossRowApp {
      *  initalize the app(memory based)
      * @param chatModel Gemini chat model
      */
-    public CrossRowApp(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
+    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
 
         // get template from resource
             this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
