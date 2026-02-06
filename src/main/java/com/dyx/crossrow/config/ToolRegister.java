@@ -1,5 +1,6 @@
 package com.dyx.crossrow.config;
 
+import com.dyx.crossrow.service.ImageGenerationService;
 import com.dyx.crossrow.tool.ImageGenerationTool;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
@@ -11,8 +12,12 @@ public class ToolRegister {
 
     //集中注册工具
     @Bean
-    public ToolCallback[] allTools(){
-        ImageGenerationTool imageGenerationTool = new ImageGenerationTool();
-        return ToolCallbacks.from(imageGenerationTool);
+    public ToolCallback[] allSearchTools(){
+        return ToolCallbacks.from();
+    }
+
+    @Bean
+    public ImageGenerationTool imageGenerationTool(ImageGenerationService imageGenerationService){
+        return new ImageGenerationTool(imageGenerationService);
     }
 }

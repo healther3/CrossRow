@@ -1,13 +1,15 @@
-package com.dyx.crossrow.app;
+package com.dyx.crossrow.service;
 
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.UUID;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class CrossRowAppTest {
 
     @Resource
@@ -41,7 +43,7 @@ class CrossRowAppTest {
     @Test
     void doChatWithRag() {
         String chatId = UUID.randomUUID().toString();
-        String message = "我时常感到生活是无意义的，我每天都在做重复的事情。";
+        String message = "西西弗斯好累。";
         String answer = crossRowApp.doChatWithRag(message, chatId, "admin");
         Assertions.assertNotNull(answer);
     }

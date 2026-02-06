@@ -1,8 +1,9 @@
-package com.dyx.crossrow.app;
+package com.dyx.crossrow.service;
 
 import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
+import com.dyx.crossrow.tool.ImageGenerationTool;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +41,8 @@ public class ChatService {
     @jakarta.annotation.Resource(name = "hybridRagAdvisor")
     private Advisor hybridRagAdvisor;
 
+    @jakarta.annotation.Resource(name = "imageGenerationTool")
+    private ImageGenerationTool imageGenerationTool;
     /**
      *  initalize the app(memory based)
      * @param chatModel Gemini chat model
@@ -131,7 +135,7 @@ public class ChatService {
      */
     public String doChatWithRag(String message, String chatId, String userId) {
         VertexAiGeminiChatOptions options = VertexAiGeminiChatOptions.builder()
-                .googleSearchRetrieval(true)
+                .googleSearchRetrieval(false)
                 .build();
 
         ChatClientResponse chatClientResponse = chatClient
@@ -141,6 +145,7 @@ public class ChatService {
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
                 .advisors(hybridRagAdvisor)
+                .tools(imageGenerationTool)
 //                .advisors(QuestionAnswerAdvisor.builder(vectorStore)
 //                        .searchRequest(SearchRequest.builder()
 //                                .topK(2)
@@ -157,6 +162,7 @@ public class ChatService {
 //                问题: {query}
 //                回答:
 //                """))
+
                 .call()
                 .chatClientResponse();
 

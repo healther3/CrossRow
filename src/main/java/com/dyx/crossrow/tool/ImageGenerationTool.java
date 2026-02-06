@@ -1,13 +1,16 @@
 package com.dyx.crossrow.tool;
 
-import com.dyx.crossrow.imagegenerate.ImageGenerationService;
+import com.dyx.crossrow.service.ImageGenerationService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
 public class ImageGenerationTool {
 
-    private ImageGenerationService imageGenerationService;
+    private final ImageGenerationService imageGenerationService;
 
+    public ImageGenerationTool(ImageGenerationService imageGenerationService) {
+        this.imageGenerationService = imageGenerationService;
+    }
     @Tool(description = "Generate images based on user descriptions. Use this tool when the user wants to see memes, comics, or photos.")
     public String generateImage(@ToolParam(description = "A detailed English description of the scene, including the subject, actions, and environment.")
                                     String prompt,

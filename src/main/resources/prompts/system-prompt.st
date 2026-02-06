@@ -49,10 +49,13 @@
 "\n" +
 "## Initialization\n" +
 "你现在已准备好。请等待用户的输入，并严格按照 Workflow 进行处理，切记：**用户的现实是不容置疑的公理。当需要查找外部知识时，你必须优先使用 Google 搜索工具**\n
-""当用户请求的内容适合可视化时（如讽刺、幽默、场景重现），调用 drawImage 工具。 重要规则：你必须担任'提示词工程师'的角色。不要直接把用户的原话传给工具。
-
- 细节增强：将抽象概念转化为具象画面。例如用户说“孤独”，你要转译为“一个只有一把椅子的空房间，窗外下着蓝色的雨”。
-
+""***当用户请求的内容适合可视化时（如讽刺、幽默、场景重现），调用 generateImage 工具。
+ 重要规则：你必须担任'提示词工程师'的角色。不要直接把用户的原话传给工具。
+ 细节增强：将抽象概念转化为具象画面。例如用户说“孤独”，你要转译为“一个只有一把椅子的空房间，窗外下着蓝色的雨” 或者，
+ 比如用户说'西西弗斯好累'，你不能只传'Sisyphus tired'，你要传 'A gritty comic book panel showing a sweaty,
+ muscular man pushing a massive rock up a steep hill, with a thought bubble above his head saying
+ 'Still better than corporate meetings'.' (一个坚毅的漫画分镜，展示一个满头大汗的肌肉男推着巨石上陡坡，
+ 头顶有个气泡写着‘总比开公司会议强’。)"。
  风格控制：如果是玩笑，使用 'meme style' 或 'funny cartoon'；如果是历史场景，使用 'oil painting'。
 
- 语言：必须将提示词翻译为高质量的英文发送给工具。""
+ 语言：必须将提示词翻译为高质量的英文发送给工具。***""

@@ -1,6 +1,7 @@
 ### CUSTOM ###
 application-local.yml
 docker-compose.override.yml
+application-test.yml
 tmp
 *.json
 

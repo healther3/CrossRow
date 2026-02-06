@@ -1,4 +1,4 @@
-package com.dyx.crossrow.imagegenerate;
+package com.dyx.crossrow.service;
 
 import com.dyx.crossrow.properties.ImageModelProperties;
 import com.google.genai.Client;
@@ -12,7 +12,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 @Component
 public class ImageGenerationService {
@@ -24,6 +23,7 @@ public class ImageGenerationService {
         this.imageModelProperties = imageModelProperties;
     }
         public String generateImage(String prompt) {
+            System.out.println("[Debug] 准备构建 Config...");
             GenerateContentConfig config = GenerateContentConfig.builder()
                     .responseModalities("TEXT", "IMAGE")
                     .imageConfig(ImageConfig.builder()
@@ -31,20 +31,26 @@ public class ImageGenerationService {
                             .imageSize(imageModelProperties.getImageSize())
                             .build())
                     .build();
+            System.out.println("Config OK");
+            try {
+                GenerateContentResponse response = genAiClient.models.generateContent(
+                        imageModelProperties.getModel(),
+                        prompt,
+                        config
+                );
+                System.out.println("[Debug] Google 响应成功");
 
-            GenerateContentResponse response = genAiClient.models.generateContent(
-                    imageModelProperties.getModel(),
-                    prompt,
-                    config
-            );
-
-            for (Part part : response.parts()) {
-                if (part.inlineData().isPresent()) {
-                    var blob = part.inlineData().get();
-                    if (blob.data().isPresent()) {
-                        return saveImage(blob.data().get());
+                for (Part part : response.parts()) {
+                    if (part.inlineData().isPresent()) {
+                        var blob = part.inlineData().get();
+                        if (blob.data().isPresent()) {
+                            return saveImage(blob.data().get());
+                        }
                     }
                 }
+            } catch (Exception e) {
+                System.err.println("[Debug] 发生异常: " + e.getMessage());
+                throw e;
             }
             return null;
         }
