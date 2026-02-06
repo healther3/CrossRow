@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class CrossRowAppTest {
+class ChatServiceTest {
 
     @Resource
     private ChatService crossRowApp;
@@ -45,6 +45,14 @@ class CrossRowAppTest {
         String chatId = UUID.randomUUID().toString();
         String message = "西西弗斯好累。";
         String answer = crossRowApp.doChatWithRag(message, chatId, "admin");
+        Assertions.assertNotNull(answer);
+    }
+
+    @Test
+    void chatWithTools() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "通过webSearch工具查一下有关苹果的冷知识，输出文字，并且画一张图。";
+        String answer = crossRowApp.doChatWithTools(message, chatId, "admin",true, true);
         Assertions.assertNotNull(answer);
     }
 }

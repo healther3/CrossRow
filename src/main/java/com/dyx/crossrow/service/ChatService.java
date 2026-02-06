@@ -4,6 +4,7 @@ import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.tool.ImageGenerationTool;
+import com.dyx.crossrow.tool.WebSearchTool;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
@@ -30,6 +31,7 @@ import java.util.List;
 public class ChatService {
 
     private final ChatClient chatClient;
+    private final ChatClient defaultChatClient;
     private final SystemPromptTemplate systemPromptTemplate;
 
     @jakarta.annotation.Resource
@@ -43,6 +45,9 @@ public class ChatService {
 
     @jakarta.annotation.Resource(name = "imageGenerationTool")
     private ImageGenerationTool imageGenerationTool;
+
+    @jakarta.annotation.Resource(name = "webSearchTool")
+    private WebSearchTool webSearchTool;
     /**
      *  initalize the app(memory based)
      * @param chatModel Gemini chat model
@@ -77,7 +82,11 @@ public class ChatService {
                         // new ReReadingAdvisor()
                 )
                 .build();
+
+        defaultChatClient = ChatClient.builder(chatModel)
+                .build();
     }
+
 
     /**
      *  chat with language model that has memory
@@ -169,6 +178,31 @@ public class ChatService {
         String content = chatClientResponse.chatResponse().getResult().getOutput().getText();
         log.info("content: {}", content);
         return content;
+    }
+
+    public String doChatWithTools(String message, String chatId, String userId, boolean allowImage, boolean allowSearch) {
+
+
+        ChatClientResponse chatClientResponse = defaultChatClient
+                .prompt()
+                .system("""
+                你是一个全能助手。
+                
+                当用户要求"先搜索再画图"时，你必须严格遵守以下顺序：
+                1. 第一步：调用搜索工具获取信息。
+                2. 第二步：**必须**先用文字总结你搜到的关键信息（比如外观、特征、颜色）。
+                **一定要在此时输出文字信息！**
+                3. 第三步：**基于搜索到的详细描述**，调用画图工具。
+                
+                ***禁止***在没有搜索结果的情况下直接画图！禁止省略搜索结果的文字总结！
+                """)
+                .user(message)
+                .tools(imageGenerationTool)
+                .tools(webSearchTool)
+                .call()
+                .chatClientResponse();;
+
+        return chatClientResponse.chatResponse().getResult().getOutput().getText();
     }
 
 }
