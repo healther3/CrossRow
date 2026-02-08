@@ -15,6 +15,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,14 +49,19 @@ public class ChatService {
 
     @jakarta.annotation.Resource(name = "webSearchTool")
     private WebSearchTool webSearchTool;
+
+    @jakarta.annotation.Resource
+    private ToolCallbackProvider toolCallbackProvider;
+
     /**
-     *  initalize the app(memory based)
+     * initalize the app(memory based)
+     *
      * @param chatModel Gemini chat model
      */
     public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
 
         // get template from resource
-            this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
+        this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
 
 //            基于文件保存 chat memory
 //            String fileDir = System.getProperty("user.dir")+"/tmp/chat-memory";
@@ -89,9 +95,10 @@ public class ChatService {
 
 
     /**
-     *  chat with language model that has memory
+     * chat with language model that has memory
+     *
      * @param message user given message
-     * @param chatId chat conversation ID
+     * @param chatId  chat conversation ID
      * @return information in chat
      */
     public String doChat(String message, String chatId, String userId) {
@@ -117,14 +124,15 @@ public class ChatService {
 
     /**
      * chat with LLM and generate a report
+     *
      * @param message user given message
-     * @param chatId chat conversation ID
-     * @return  ai response with report
+     * @param chatId  chat conversation ID
+     * @return ai response with report
      */
     public PainReport doChatReport(String message, String chatId, String userId) {
         PainReport painReport = chatClient
                 .prompt()
-                .system(systemPromptTemplate.render()+"***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
+                .system(systemPromptTemplate.render() + "***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
@@ -137,9 +145,10 @@ public class ChatService {
 
     /**
      * Chat with RAG (Retrieval Augmented Generation)
+     *
      * @param message user given message
-     * @param chatId chat id
-     * @param userId userid
+     * @param chatId  chat id
+     * @param userId  userid
      * @return ai response
      */
     public String doChatWithRag(String message, String chatId, String userId) {
@@ -188,18 +197,18 @@ public class ChatService {
         ChatClientResponse chatClientTextResponse = defaultChatClient
                 .prompt()
                 .system("""
-                 请根据用户问题，搜索相关信息并给出回答
-                """)
+                         请根据用户问题，搜索相关信息并给出回答
+                        """)
                 .user(message)
                 .tools(webSearchTool)
                 .call()
                 .chatClientResponse();
 
-                String summary = chatClientTextResponse
-                        .chatResponse()
-                        .getResult()
-                        .getOutput()
-                        .getText();
+        String summary = chatClientTextResponse
+                .chatResponse()
+                .getResult()
+                .getOutput()
+                .getText();
 
         System.out.println(" (Summary): " + summary);
 
@@ -210,9 +219,9 @@ public class ChatService {
         ChatClientResponse chatClientImageResponse = defaultChatClient
                 .prompt()
                 .system("""
-                 你是一个画师。根据用户提供的描述生成图片，可以为卡通或者写实
-                 请直接生成。
-                """)
+                         你是一个画师。根据用户提供的描述生成图片，可以为卡通或者写实
+                         请直接生成。
+                        """)
                 .user(summary)
                 .tools(imageGenerationTool)
                 .call()
@@ -230,4 +239,26 @@ public class ChatService {
 
     }
 
+    public String doChatWithMCP(String message, String chatId, String userId) {
+
+        ChatClientResponse chatClientTextResponse = defaultChatClient
+                .prompt()
+                .system("""
+                         请根据用户问题，搜索相关信息并给出回答
+                        """)
+                .user(message)
+                .toolCallbacks(toolCallbackProvider)
+                .call()
+                .chatClientResponse();
+
+        String content = chatClientTextResponse
+                .chatResponse()
+                .getResult()
+                .getOutput()
+                .getText();
+
+        log.info("content: {}", content);
+        return content;
+
+    }
 }

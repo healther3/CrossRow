@@ -55,4 +55,12 @@ class ChatServiceTest {
         String answer = crossRowApp.doChatWithTools(message, chatId, "admin",true, true);
         Assertions.assertNotNull(answer);
     }
+
+    @Test
+    void doChatWithMCP() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "查找五张跟康德有关的文章";
+        String answer = crossRowApp.doChatWithMCP(message, chatId, "admin");
+        Assertions.assertNotNull(answer);
+    }
 }
