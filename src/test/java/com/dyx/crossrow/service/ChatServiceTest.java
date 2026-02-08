@@ -51,7 +51,7 @@ class ChatServiceTest {
     @Test
     void chatWithTools() {
         String chatId = UUID.randomUUID().toString();
-        String message = "通过webSearch工具查一下有关苹果的冷知识，输出文字，并且画一张图。";
+        String message = "去查一下长颈鹿长什么样，然后给我画一张";
         String answer = crossRowApp.doChatWithTools(message, chatId, "admin",true, true);
         Assertions.assertNotNull(answer);
     }

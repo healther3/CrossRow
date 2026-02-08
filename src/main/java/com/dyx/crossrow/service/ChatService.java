@@ -182,27 +182,52 @@ public class ChatService {
 
     public String doChatWithTools(String message, String chatId, String userId, boolean allowImage, boolean allowSearch) {
 
+        System.out.println("[链式调用] 开始处理: " + message);
 
-        ChatClientResponse chatClientResponse = defaultChatClient
+        System.out.println("正在调用搜索工具...");
+        ChatClientResponse chatClientTextResponse = defaultChatClient
                 .prompt()
                 .system("""
-                你是一个全能助手。
-                
-                当用户要求"先搜索再画图"时，你必须严格遵守以下顺序：
-                1. 第一步：调用搜索工具获取信息。
-                2. 第二步：**必须**先用文字总结你搜到的关键信息（比如外观、特征、颜色）。
-                **一定要在此时输出文字信息！**
-                3. 第三步：**基于搜索到的详细描述**，调用画图工具。
-                
-                ***禁止***在没有搜索结果的情况下直接画图！禁止省略搜索结果的文字总结！
+                 请根据用户问题，搜索相关信息并给出回答
                 """)
                 .user(message)
-                .tools(imageGenerationTool)
                 .tools(webSearchTool)
                 .call()
-                .chatClientResponse();;
+                .chatClientResponse();
 
-        return chatClientResponse.chatResponse().getResult().getOutput().getText();
+                String summary = chatClientTextResponse
+                        .chatResponse()
+                        .getResult()
+                        .getOutput()
+                        .getText();
+
+        System.out.println(" (Summary): " + summary);
+
+        if (summary == null || summary.isEmpty()) {
+            summary = "（搜索未返回有效总结，尝试直接基于原问题生成）" + message;
+        }
+
+        ChatClientResponse chatClientImageResponse = defaultChatClient
+                .prompt()
+                .system("""
+                 你是一个画师。根据用户提供的描述生成图片，可以为卡通或者写实
+                 请直接生成。
+                """)
+                .user(summary)
+                .tools(imageGenerationTool)
+                .call()
+                .chatClientResponse();
+
+        String imageContent = chatClientImageResponse
+                .chatResponse()
+                .getResult()
+                .getOutput()
+                .getText();
+        System.out.println(" 结果 (ImageContent): " + imageContent);
+        String content = summary + imageContent;
+        log.info("content: {}", content);
+        return content;
+
     }
 
 }
