@@ -13,6 +13,11 @@ import org.springframework.ai.chat.messages.UserMessage;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * BaseAgent class, implement agent loop:
+ * execute step by step in agent loop for
+ * ReAct Agent implementation
+ */
 @Data
 @Slf4j
 public abstract class BaseAgent {

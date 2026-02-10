@@ -51,4 +51,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 
     }
+    @ExceptionHandler(ReActProcessingException.class)
+    public ResponseEntity<Map<String, Object>> ReActProcessingException(EmptyUserPromptException e) {
+        log.warn("ReAct failed: {}", e.getMessage());  // 只记录简单日志
+
+        Map<String, Object> response = Map.of(
+                "success", false,
+                "error", e.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+
+    }
 }
