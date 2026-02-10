@@ -86,6 +86,15 @@ public abstract class BaseAgent {
      * clean resources
      */
     protected void clean(){
+        log.debug("Cleaning agent [{}] resources, previous state: {}", this.name, this.state);
 
+        this.state = AgentState.IDLE;
+        this.currentStep = 0;
+
+        if (this.messageList != null) {
+            this.messageList.clear();
+        }
+
+        log.debug("Agent [{}] cleaned successfully", this.name);
     }
 }
