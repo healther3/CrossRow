@@ -8,7 +8,9 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -34,13 +36,44 @@ public abstract class BaseAgent {
      * @return execution result
      */
     public String run(String userPrompt ) {
-        if (this.state != AgentState.IDLE){
+        //check exceptions
+        if (this.state != AgentState.IDLE) {
             throw new AgentStateException(this.state);
         }
         if (StrUtil.isEmpty(userPrompt)) {
             throw new EmptyUserPromptException();
         }
-        return "";
+        // change state
+        this.state = AgentState.RUNNING;
+        //save context and result
+        messageList.add(new UserMessage(userPrompt));
+
+        try {
+            List<String> results = new ArrayList<>();
+            //execute
+            for (int i = 0; i < maxStep && this.state != AgentState.FINISHED; i++) {
+                currentStep = i + 1;
+                log.info("Step: {}/{}", currentStep, maxStep);
+                String stepResult = step();
+                results.add("Step: " + currentStep + ":" + stepResult);
+            }
+
+            //CHECK STATUS
+            if (currentStep >= maxStep) {
+                this.state = AgentState.FINISHED;
+                results.add("Finished: reached max steps");
+                log.info("Agent Finished");
+            }
+
+            return String.join("\n", results);
+
+        } catch (Exception e){
+            this.state = AgentState.ERROR;
+        log.error("Error: agent can't execute, {}", e.getMessage());
+        return "Error: agent can't execute, " + e.getMessage();
+        } finally {
+            clean();
+        }
     }
 
     /**
