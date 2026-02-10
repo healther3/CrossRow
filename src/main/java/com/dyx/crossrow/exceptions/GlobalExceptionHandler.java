@@ -26,4 +26,29 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
+
+    @ExceptionHandler(AgentStateException.class)
+    public ResponseEntity<Map<String, Object>> handleAgentStateException(AgentStateException e) {
+        log.warn("Agent State Exception: {}", e.getMessage());  // 只记录简单日志
+
+        Map<String, Object> response = Map.of(
+                "success", false,
+                "error", e.getMessage(),
+                "agentState", e.getAgentState().name()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(EmptyUserPromptException.class)
+    public ResponseEntity<Map<String, Object>> handleEmptyUserPromptException(EmptyUserPromptException e) {
+        log.warn("Empty User Prompt: {}", e.getMessage());  // 只记录简单日志
+
+        Map<String, Object> response = Map.of(
+                "success", false,
+                "error", e.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+
+    }
 }
