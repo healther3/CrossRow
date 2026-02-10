@@ -24,7 +24,7 @@ public abstract class ReActAgent extends BaseAgent{
         // thinking:
         boolean shouldAct = thinking();
         if (!shouldAct) {
-            return "finish reasoning";
+            return "reasoning";
         }
         // acting
         return act();
