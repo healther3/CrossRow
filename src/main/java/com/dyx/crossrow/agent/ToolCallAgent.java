@@ -3,6 +3,7 @@ package com.dyx.crossrow.agent;
 import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.agent.model.AgentState;
 import com.dyx.crossrow.agent.model.ToolChoice;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
+@Data
 public class ToolCallAgent extends ReActAgent{
 
     private List<AssistantMessage.ToolCall> pendingToolCalls = new ArrayList<>();
@@ -27,17 +29,17 @@ public class ToolCallAgent extends ReActAgent{
     private final Map<String, Object> availableTools = new HashMap<>();
     private final ToolCallback[] toolCallbacks;
     private final List<String> specialToolNames;
-    private final ToolChoice toolChoice;
     private final ToolCallingManager toolCallingManager;
+    private final ToolChoice toolChoice;
 
     public ToolCallAgent(ToolCallback[] toolCallbacks, List<String> specialToolNames,
-                         ToolCallingManager toolCallingManager,ToolChoice toolChoice)
+                         ToolCallingManager toolCallingManager, ToolChoice toolChoice)
     {
         super();
         this.toolCallbacks = toolCallbacks;
         this.specialToolNames = specialToolNames;
-        this.toolChoice = toolChoice;
         this.toolCallingManager = toolCallingManager;
+        this.toolChoice = toolChoice;
     }
 
     /**
@@ -125,7 +127,7 @@ public class ToolCallAgent extends ReActAgent{
             setMessageList(toolExecutionResult.conversationHistory());
             ToolResponseMessage toolResponseMessage = (ToolResponseMessage) toolExecutionResult.conversationHistory().getLast();
 
-            // check if should terminate
+            // check if agent should terminate
             boolean shouldTerminate = toolResponseMessage.getResponses().stream()
                     .anyMatch(response -> specialToolNames.contains(response.name().toLowerCase()));
             if(shouldTerminate) {

@@ -3,6 +3,7 @@ package com.dyx.crossrow.config;
 import com.dyx.crossrow.properties.SearchEngineProperties;
 import com.dyx.crossrow.service.ImageGenerationService;
 import com.dyx.crossrow.tool.ImageGenerationTool;
+import com.dyx.crossrow.tool.TerminateTool;
 import com.dyx.crossrow.tool.WebSearchTool;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
@@ -14,10 +15,6 @@ import org.springframework.web.client.RestClient;
 public class ToolRegister {
 
     //集中注册工具
-    @Bean
-    public ToolCallback[] allSearchTools(){
-        return ToolCallbacks.from();
-    }
 
     @Bean
     public WebSearchTool  webSearchTool(SearchEngineProperties searchEngineProperties){
@@ -27,5 +24,21 @@ public class ToolRegister {
     @Bean
     public ImageGenerationTool imageGenerationTool(ImageGenerationService imageGenerationService){
         return new ImageGenerationTool(imageGenerationService);
+    }
+
+    @Bean
+    public TerminateTool terminateTool(){
+        return new TerminateTool();
+    }
+
+    @Bean
+    public ToolCallback[] allTools(WebSearchTool webSearchTool,
+                                   ImageGenerationTool imageGenerationTool,
+                                   TerminateTool terminateTool){
+        return ToolCallbacks.from(
+                webSearchTool,
+                imageGenerationTool,
+                terminateTool
+        );
     }
 }
