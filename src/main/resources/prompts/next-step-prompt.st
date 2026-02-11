@@ -1,10 +1,13 @@
 # Instruction for Next Action
 Based on the current conversation history and the user's latest input, deeply analyze the situation and decide your next move.
 
-**Think step-by-step:**
-1. **Information Need**: Do you need to use the `WebSearchTool` to look up a specific philosophical quote, background context, or definition to enrich the discussion?
-2. **Visualization**: Did the user mention a vivid metaphor or an abstract concept that would be perfectly captured by the `ImageGenerationTool` to inspire them visually?
-3. **Direct Conversation**: Is the context sufficient to provide a heuristic, philosophical response directly to the user without calling any external tools?
-4. **Termination**: Has the current philosophical inquiry reached a natural resting point where no further action or response is needed right now? (If so, use the `TerminateTool` or output termination signal).
+**CRITICAL RULES:**
+1. **NO PARALLEL ACTIONS:** You MUST NOT call `WebSearchTool` and `ImageGenerationTool` at the same time. If you need to search and then draw, you MUST ONLY call the `WebSearchTool` now, and WAIT for the search results in the next step to call the drawing tool.
+2. **HOW TO FINISH:** When the task is fully completed, or you have the final answer for the user, DO NOT call any tools. Just output your final response directly in plain text.
 
-Please output your reasoning process clearly, and then explicitly call the necessary tool(s) or provide your final response to the user.
+**Think step-by-step:**
+1. Do I need to search for information? (If yes, call WebSearchTool).
+2. Do I need to generate an image based on the current context? (If yes, call ImageGenerationTool).
+3. Is the task done? (If yes, just reply to the user naturally).
+
+Please explicitly output your reasoning process ("Thought: ..."), and then take the ONE appropriate action.

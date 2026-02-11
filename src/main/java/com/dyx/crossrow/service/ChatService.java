@@ -3,12 +3,15 @@ package com.dyx.crossrow.service;
 import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
+import com.dyx.crossrow.agent.CrossRowAgent;
+import com.dyx.crossrow.factory.AgentFactory;
 import com.dyx.crossrow.tool.ImageGenerationTool;
 import com.dyx.crossrow.tool.WebSearchTool;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -23,7 +26,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 
-
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -34,6 +37,7 @@ public class ChatService {
     private final ChatClient chatClient;
     private final ChatClient defaultChatClient;
     private final SystemPromptTemplate systemPromptTemplate;
+    private final AgentFactory agentFactory;
 
     @jakarta.annotation.Resource
     private VectorStore vectorStore;
@@ -53,15 +57,21 @@ public class ChatService {
     @jakarta.annotation.Resource
     private ToolCallbackProvider toolCallbackProvider;
 
+    @jakarta.annotation.Resource
+    private ChatMemory chatMemory;
     /**
      * initalize the app(memory based)
      *
      * @param chatModel Gemini chat model
      */
-    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource, ChatMemory chatMemory) {
+    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
+                       AgentFactory agentFactory, ChatMemory chatMemory) {
 
         // get template from resource
         this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
+        // get factory
+        this.agentFactory = agentFactory;
+        this.chatMemory = chatMemory;
 
 //            基于文件保存 chat memory
 //            String fileDir = System.getProperty("user.dir")+"/tmp/chat-memory";
@@ -260,5 +270,33 @@ public class ChatService {
         log.info("content: {}", content);
         return content;
 
+    }
+
+    public  String doChatWithCrossRowAgent(String message, String chatId, String userId) {
+        log.info("开始 Agent 对话流 - User: {}, Session: {}", userId, chatId);
+
+        //  通过工厂创建一个干净的、绑定了当前用户的 Agent
+        CrossRowAgent agent = agentFactory.createAgent(userId, chatId);
+
+        //  从 Redis 中提取历史记忆
+        List<Message> history = chatMemory.get(chatId);
+        if (history != null && !history.isEmpty()) {
+            // 将历史记忆“装载”进 Agent 的大脑 (messageList)
+            agent.setMessageList(new ArrayList<>(history));
+            log.info("成功加载历史记忆，共 {} 条", history.size());
+        }
+
+        // 让 Agent 开始推理想象并执行工具 (它会自动将新问题 add 进 messageList)
+        String response = agent.run(message);
+
+        // 提取 Agent 思考完毕后的完整大脑状态
+        List<Message> updatedMemory = agent.getMessageList();
+
+        // 保存回 Redis (注意：你的 RedisChatMemory.add 是追加逻辑，如果传入全量 list 会导致重复。
+        // 所以我们先 clear 掉旧的，再存入新的全量历史，或者你可以在 RedisChatMemory 里优化一下合并逻辑)
+        chatMemory.clear(chatId);
+        chatMemory.add(chatId, updatedMemory);
+
+        return response;
     }
 }

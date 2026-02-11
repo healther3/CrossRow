@@ -63,4 +63,12 @@ class ChatServiceTest {
         String answer = crossRowApp.doChatWithMCP(message, chatId, "admin");
         Assertions.assertNotNull(answer);
     }
+
+    @Test
+    void doChatWithCrossRowAgent() {
+        String chatId = UUID.randomUUID().toString();
+        String message =  "这是一个包含三个步骤的任务，请一步步来： 第一步，去网上查一下‘赛博朋克2077’这款游戏的标志性色彩搭配是什么； 第二步，再去查一下‘赛博哥特（CyberGoth）’这种亚文化的典型穿搭特征； 第三步，结合这两个搜索结果，给我画一张‘一个穿着赛博哥特服饰的女孩站在赛博朋克小巷里’的电影级CG图。 图片生成成功后，请调用 terminate 工具结束任务，理由写‘画图任务圆满完成’。";
+        String answer = crossRowApp.doChatWithCrossRowAgent(message, chatId, "admin");
+        Assertions.assertNotNull(answer);
+    }
 }

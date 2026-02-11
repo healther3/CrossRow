@@ -37,8 +37,7 @@ public class ToolRegister {
                                    TerminateTool terminateTool){
         return ToolCallbacks.from(
                 webSearchTool,
-                imageGenerationTool,
-                terminateTool
+               imageGenerationTool
         );
     }
 }

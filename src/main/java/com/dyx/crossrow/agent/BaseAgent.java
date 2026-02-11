@@ -25,6 +25,9 @@ public abstract class BaseAgent {
     private String name;
     private String systemPrompt;
     private String nextStepPrompt;
+    //aut
+    private String userId;
+    private String sessionId;
     //agent state
     private AgentState state = AgentState.IDLE;
     //restricted max step

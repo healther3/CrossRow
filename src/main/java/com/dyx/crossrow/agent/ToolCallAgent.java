@@ -5,10 +5,7 @@ import com.dyx.crossrow.agent.model.AgentState;
 import com.dyx.crossrow.agent.model.ToolChoice;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.ToolResponseMessage;
-import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingManager;
@@ -47,21 +44,21 @@ public class ToolCallAgent extends ReActAgent{
      */
     @Override
     public boolean thinking() {
+        List<Message> currentMessages = new ArrayList<>(getMessageList());
         // add user prompt into message list
         if (StrUtil.isNotBlank(getNextStepPrompt())){
-            UserMessage userMessage = new UserMessage(getNextStepPrompt());
-            getMessageList().add(userMessage);
+            currentMessages.add(new UserMessage(getNextStepPrompt()));
         }
 
         try {
             // load concatenated message list
-            List<Message> messages = getMessageList();
-            Prompt prompt = new Prompt(messages);
+            Prompt prompt = new Prompt(currentMessages);
 
             // get response from LLM
             ChatResponse response = getChatClient().prompt(prompt)
                     .system(getSystemPrompt())
                     .toolCallbacks(toolCallbacks)
+                    .advisors(spec -> spec.param("userId", this.getUserId()))
                     .call()
                     .chatResponse();
 
