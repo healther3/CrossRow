@@ -12,7 +12,7 @@ public class ImageGenerationTool {
     public ImageGenerationTool(ImageGenerationService imageGenerationService) {
         this.imageGenerationService = imageGenerationService;
     }
-    @Tool(description = "Generate images based on user descriptions. Use this tool when the user wants to see memes, comics, or photos.")
+    @Tool(name = "generateImage",description = "Generate images based on user descriptions. Use this tool when the user wants to see memes, comics, or photos.")
     public String generateImage(@ToolParam(description = "A detailed English description of the scene, including the subject, actions, and environment.")
                                     String prompt,
                                 @ToolParam(description = "Image style, such as MEME, COMIC, or REALISTIC", required = false)

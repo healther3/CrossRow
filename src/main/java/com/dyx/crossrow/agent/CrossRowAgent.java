@@ -62,10 +62,10 @@ public class CrossRowAgent extends ToolCallAgent{
                         new SimpleAuthAdvisor(),
                         new SimpleQuotaAdvisor(5),
                         // customized logger advisor
-                        new MyLogAdvisor(100),
+                        new MyLogAdvisor(100)
                         // customized enhanced advisor
                         // new ReReadingAdvisor()
-                        hybridRagAdvisor
+                        //hybridRagAdvisor
                 )
                 .defaultOptions(options)
                 .build();

@@ -11,6 +11,8 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,19 +56,50 @@ public class ToolCallAgent extends ReActAgent{
             // load concatenated message list
             Prompt prompt = new Prompt(currentMessages);
 
-            // get response from LLM
+// ==========================================
+            // 🔥 修改点 1：夺回工具执行权
+            // ==========================================
             ChatResponse response = getChatClient().prompt(prompt)
                     .system(getSystemPrompt())
-                    .toolCallbacks(toolCallbacks)
                     .advisors(spec -> spec.param("userId", this.getUserId()))
+                    .toolCallbacks(toolCallbacks)
+                    // 开启 Proxy 模式：阻止 Spring AI 自动执行工具，强迫它立即 return ToolCall 给我们
+                    .options(VertexAiGeminiChatOptions.builder()
+                            .internalToolExecutionEnabled( false)
+                            .build())
                     .call()
                     .chatResponse();
+
+            AssistantMessage assistantMessage = response.getResult().getOutput();
+
+            // ==========================================
+            // 🔥 修改点 2：防并发截流器（篡改 AI 记忆）
+            // ==========================================
+            if (assistantMessage.hasToolCalls() && assistantMessage.getToolCalls().size() > 1) {
+                log.warn("🚨 拦截到 Gemini 的并发暴走！它试图一次性调用 {} 个工具。强行物理切断，仅保留第一个！",
+                        assistantMessage.getToolCalls().size());
+
+                // 只取第一个动作（比如：第一次搜索）
+                AssistantMessage.ToolCall firstToolCall = assistantMessage.getToolCalls().get(0);
+
+                // 重构 AssistantMessage，让模型和框架都认为刚才只发生了一次调用
+                String content = assistantMessage.getText() != null ? assistantMessage.getText() : "";
+                assistantMessage = AssistantMessage.builder()
+                        .content(content)
+                        .toolCalls(List.of(firstToolCall))
+                        .build();
+
+                // 更新 Response，确保给到后续 act() 方法的只有这一个工具
+                org.springframework.ai.chat.model.Generation newGeneration =
+                        new org.springframework.ai.chat.model.Generation(assistantMessage, response.getResult().getMetadata());
+                response = new ChatResponse(List.of(newGeneration), response.getMetadata());
+            }
 
             // save response for acting
             this.toolCallResponse = response;
 
             // add LLM info into message list(memory)
-            AssistantMessage assistantMessage = response.getResult().getOutput();
+            //AssistantMessage assistantMessage = response.getResult().getOutput();
             getMessageList().add(assistantMessage);
 
             // get pending tool calls
@@ -119,7 +152,13 @@ public class ToolCallAgent extends ReActAgent{
 
         try {
             // execute tools
-            Prompt toolPrompt = new Prompt(getMessageList());
+            VertexAiGeminiChatOptions options =
+                    org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions.builder()
+                            .toolCallbacks(this.toolCallbacks)
+                            .build();
+
+            // 把带着工具名册的 Options 塞进 Prompt
+            Prompt toolPrompt = new Prompt(getMessageList(), options);
             ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(toolPrompt, toolCallResponse);
 
             // add tool execution messages to message list

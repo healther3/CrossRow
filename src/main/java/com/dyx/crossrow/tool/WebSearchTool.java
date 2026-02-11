@@ -23,7 +23,7 @@ public class WebSearchTool {
         this.searchEngineProperties = searchEngineProperties;
         this.restClient = RestClient.create();
     }
-    @Tool(description = "Search the web for information. Use this tool when the user wants to know " +
+    @Tool(name = "searchWeb",description = "Search the web for information. Use this tool when the user wants to know " +
             "something that is not in the context of the conversation.")
     public Map<String, Object> searchWeb(@ToolParam(description = "search the keywords, try to be specific.")
                                 String query) {
