@@ -33,7 +33,7 @@ public abstract class BaseAgent {
     //LLM
     private ChatClient chatClient;
     //memory
-    private List<Message> messageList;
+    private List<Message> messageList = new ArrayList<>();
 
     /**
      *

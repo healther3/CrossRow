@@ -26,7 +26,6 @@ public class ToolCallAgent extends ReActAgent{
 
     private List<AssistantMessage.ToolCall> pendingToolCalls = new ArrayList<>();
     private ChatResponse toolCallResponse;
-    private final Map<String, Object> availableTools = new HashMap<>();
     private final ToolCallback[] toolCallbacks;
     private final List<String> specialToolNames;
     private final ToolCallingManager toolCallingManager;
@@ -62,7 +61,7 @@ public class ToolCallAgent extends ReActAgent{
             // get response from LLM
             ChatResponse response = getChatClient().prompt(prompt)
                     .system(getSystemPrompt())
-                    .tools(toolCallbacks)
+                    .toolCallbacks(toolCallbacks)
                     .call()
                     .chatResponse();
 
@@ -96,7 +95,10 @@ public class ToolCallAgent extends ReActAgent{
             // decide acting or not
             if (pendingToolCalls == null || pendingToolCalls.isEmpty()) {
                 // if no content then return false, else return true: output text
-                return StrUtil.isNotBlank(content);
+                if (StrUtil.isNotBlank(content)) {
+                    setState(AgentState.FINISHED);
+                }
+                return false;
             }
             return true;
         }catch (Exception e){

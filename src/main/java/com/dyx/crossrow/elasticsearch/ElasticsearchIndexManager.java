@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch.indices.CreateIndexResponse;
 import com.dyx.crossrow.properties.ElasticsearchProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
