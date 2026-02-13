@@ -4,6 +4,10 @@ A Spring Boot AI application that combines LLM capabilities with RAG (Retrieval 
 
 > **Status**:  Under Active Development
 
+## Todo List
+- [ ] implement tool class that help agent retrieve documents from elastic search
+- [ ] implement tool class that enable agent to access/modify documents
+- [ ] implement full frontend/backend service
 ## Overview
 
 CrossRow is an AI-powered "Rational Life Strategist" that helps users navigate real-world challenges by combining:

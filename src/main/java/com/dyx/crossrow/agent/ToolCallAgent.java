@@ -3,6 +3,7 @@ package com.dyx.crossrow.agent;
 import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.agent.model.AgentState;
 import com.dyx.crossrow.agent.model.ToolChoice;
+import com.dyx.crossrow.tool.SimpleToolCallManager;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.*;
@@ -27,11 +28,11 @@ public class ToolCallAgent extends ReActAgent{
     private ChatResponse toolCallResponse;
     private final ToolCallback[] toolCallbacks;
     private final List<String> specialToolNames;
-    private final ToolCallingManager toolCallingManager;
+    private final SimpleToolCallManager toolCallingManager;
     private final ToolChoice toolChoice;
 
     public ToolCallAgent(ToolCallback[] toolCallbacks, List<String> specialToolNames,
-                         ToolCallingManager toolCallingManager, ToolChoice toolChoice)
+                         SimpleToolCallManager toolCallingManager, ToolChoice toolChoice)
     {
         super();
         this.toolCallbacks = toolCallbacks;
@@ -76,7 +77,7 @@ public class ToolCallAgent extends ReActAgent{
             // 🔥 修改点 2：防并发截流器（篡改 AI 记忆）
             // ==========================================
             if (assistantMessage.hasToolCalls() && assistantMessage.getToolCalls().size() > 1) {
-                log.warn("🚨 拦截到 Gemini 的并发暴走！它试图一次性调用 {} 个工具。强行物理切断，仅保留第一个！",
+                log.warn(" 试图一次性调用 {} 个工具。强行物理切断，仅保留第一个",
                         assistantMessage.getToolCalls().size());
 
                 // 只取第一个动作（比如：第一次搜索）
@@ -153,14 +154,14 @@ public class ToolCallAgent extends ReActAgent{
         try {
             // execute tools
             VertexAiGeminiChatOptions options =
-                    org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions.builder()
+                    VertexAiGeminiChatOptions.builder()
                             .toolCallbacks(this.toolCallbacks)
                             .build();
 
             // 把带着工具名册的 Options 塞进 Prompt
-            Prompt toolPrompt = new Prompt(getMessageList(), options);
+            Prompt toolPrompt = new Prompt(getMessageList());
+            //ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(toolPrompt, toolCallResponse);
             ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(toolPrompt, toolCallResponse);
-
             // add tool execution messages to message list
             setMessageList(toolExecutionResult.conversationHistory());
             ToolResponseMessage toolResponseMessage = (ToolResponseMessage) toolExecutionResult.conversationHistory().getLast();

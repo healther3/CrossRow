@@ -4,6 +4,7 @@ import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.agent.model.ToolChoice;
+import com.dyx.crossrow.tool.SimpleToolCallManager;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.model.ChatModel;
@@ -30,7 +31,7 @@ public class CrossRowAgent extends ToolCallAgent{
 
     public CrossRowAgent(ToolCallback[] allTools,
                          List<String> specialToolNames,
-                         ToolCallingManager toolCallingManager,
+                         SimpleToolCallManager toolCallingManager,
                          ChatModel chatModel,
                          @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                          @Value("classpath:/prompts/next-step-prompt.st") Resource nextStepPromptResource,
