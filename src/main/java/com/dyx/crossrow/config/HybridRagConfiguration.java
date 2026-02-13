@@ -68,7 +68,9 @@ public class HybridRagConfiguration {
      * @return  混合检索advisor
      */
     @Bean
-    public Advisor hybridRagAdvisor(HybridDocumentRetriever hybridRetriever, ChatClient.Builder chatClientBuilder) {
+    public Advisor hybridRagAdvisor(HybridDocumentRetriever hybridRetriever,
+                                    ChatClient.Builder chatClientBuilder,
+                                    @Value("classpath:/prompts/rag-retrieve-answer-prompt.st") Resource ragPromptResource){
         // 聚合转换器
         QueryTransformer compressionQueryTransformer = CompressionQueryTransformer.builder()
                 .chatClientBuilder(chatClientBuilder)
@@ -77,20 +79,8 @@ public class HybridRagConfiguration {
         QueryTransformer rewriteQureryTransformer = RewriteQueryTransformer.builder()
                 .chatClientBuilder(chatClientBuilder)
                 .build();
-        //自定义prompt template
-        PromptTemplate promptTemplate = new PromptTemplate("""
-                下面是一些会帮助回答用户问题的信息
-                ---------------------
-                {context}
-                ---------------------
-                结合这些可以帮助回答的上下文信息，跟用户谈论一下他给出的信息.
-                *回答时请注明信息来源，例如:"根据存在主义哲学观念，..."*
-                *不要在回答中写出文档来源:+文件名*
-                *尽量以幽默，诙谐的口气回答问题*
-                问题: {query}
-                回答:
-                """);
 
+        PromptTemplate promptTemplate = new PromptTemplate(ragPromptResource);
         QueryAugmenter queryAugmenter = ContextualQueryAugmenter.builder()
                 .promptTemplate(promptTemplate)
                 .build();

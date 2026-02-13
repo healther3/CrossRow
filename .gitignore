@@ -4,6 +4,8 @@ docker-compose.override.yml
 application-test.yml
 tmp
 *.json
+generated-images/
+*.log
 
 HELP.md
 target/

@@ -3,7 +3,6 @@ package com.dyx.crossrow.tool;
 import com.dyx.crossrow.service.ImageGenerationService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.stereotype.Service;
 
 public class ImageGenerationTool {
 
@@ -30,5 +29,5 @@ public class ImageGenerationTool {
         } catch (Exception e) {
             return "绘图失败: " + e.getMessage();
         }
-    };
+    }
 }
