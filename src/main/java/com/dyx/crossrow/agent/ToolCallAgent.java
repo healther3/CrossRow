@@ -4,10 +4,12 @@ import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.agent.model.AgentState;
 import com.dyx.crossrow.agent.model.ToolChoice;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
+import com.dyx.crossrow.tool.ToolCallStrategy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
@@ -30,15 +32,18 @@ public class ToolCallAgent extends ReActAgent{
     private final List<String> specialToolNames;
     private final SimpleToolCallManager toolCallingManager;
     private final ToolChoice toolChoice;
+    private final ToolCallStrategy toolCallStrategy;
 
     public ToolCallAgent(ToolCallback[] toolCallbacks, List<String> specialToolNames,
-                         SimpleToolCallManager toolCallingManager, ToolChoice toolChoice)
+                         SimpleToolCallManager toolCallingManager, ToolChoice toolChoice,
+                         ToolCallStrategy toolCallStrategy)
     {
         super();
         this.toolCallbacks = toolCallbacks;
         this.specialToolNames = specialToolNames;
         this.toolCallingManager = toolCallingManager;
         this.toolChoice = toolChoice;
+        this.toolCallStrategy = toolCallStrategy;
     }
 
     /**
@@ -56,10 +61,7 @@ public class ToolCallAgent extends ReActAgent{
         try {
             // load concatenated message list
             Prompt prompt = new Prompt(currentMessages);
-
-// ==========================================
-            // 🔥 修改点 1：夺回工具执行权
-            // ==========================================
+            // enable customized tool call
             ChatResponse response = getChatClient().prompt(prompt)
                     .system(getSystemPrompt())
                     .advisors(spec -> spec.param("userId", this.getUserId()))
@@ -71,30 +73,13 @@ public class ToolCallAgent extends ReActAgent{
                     .call()
                     .chatResponse();
 
+            // get message from llm, make only one tool being called a time
             AssistantMessage assistantMessage = response.getResult().getOutput();
-
-            // ==========================================
-            // 🔥 修改点 2：防并发截流器（篡改 AI 记忆）
-            // ==========================================
-            if (assistantMessage.hasToolCalls() && assistantMessage.getToolCalls().size() > 1) {
-                log.warn(" 试图一次性调用 {} 个工具。强行物理切断，仅保留第一个",
-                        assistantMessage.getToolCalls().size());
-
-                // 只取第一个动作（比如：第一次搜索）
-                AssistantMessage.ToolCall firstToolCall = assistantMessage.getToolCalls().get(0);
-
-                // 重构 AssistantMessage，让模型和框架都认为刚才只发生了一次调用
-                String content = assistantMessage.getText() != null ? assistantMessage.getText() : "";
-                assistantMessage = AssistantMessage.builder()
-                        .content(content)
-                        .toolCalls(List.of(firstToolCall))
-                        .build();
+            assistantMessage = toolCallStrategy.processOneToolCalls(assistantMessage, response);
 
                 // 更新 Response，确保给到后续 act() 方法的只有这一个工具
-                org.springframework.ai.chat.model.Generation newGeneration =
-                        new org.springframework.ai.chat.model.Generation(assistantMessage, response.getResult().getMetadata());
+                Generation newGeneration = new Generation(assistantMessage, response.getResult().getMetadata());
                 response = new ChatResponse(List.of(newGeneration), response.getMetadata());
-            }
 
             // save response for acting
             this.toolCallResponse = response;
