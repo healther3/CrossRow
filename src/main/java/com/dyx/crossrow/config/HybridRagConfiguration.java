@@ -14,14 +14,16 @@ import org.springframework.ai.rag.preretrieval.query.transformation.TranslationQ
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
 
 @Configuration
 public class HybridRagConfiguration {
 
     @Bean
-    public Advisor ragAdvisor(VectorStore pgVectorStore, ChatClient.Builder chatClientBuilder) {
+    public Advisor ragAdvisor(VectorStore pgVectorStore, ChatClient.Builder chatClientBuilder, @Value("classpath:/prompts/rag-retrieve-answer-prompt.st") Resource ragPromptResource) {
         QueryTransformer translationQueryTransformer = TranslationQueryTransformer.builder()
                 .chatClientBuilder(chatClientBuilder)
                 .targetLanguage("Chinese")
@@ -48,17 +50,7 @@ public class HybridRagConfiguration {
 //                .includeOriginal(true) // 是否包括原先问题，默认是true
 //                .build();
 
-        PromptTemplate promptTemplate = new PromptTemplate("""
-                下面是一些会帮助回答用户问题的信息
-                ---------------------
-                {context}
-                ---------------------
-                结合这些可以帮助回答的上下文信息，给出用户问题分析和解决方案.
-                *回答时请注明信息来源，例如:"根据存在主义哲学观念，..."*
-                *不要在回答中写出文件名*
-                问题: {query}
-                回答:
-                """);
+        PromptTemplate promptTemplate = new PromptTemplate(ragPromptResource);
         QueryAugmenter queryAugmenter = ContextualQueryAugmenter.builder().promptTemplate(promptTemplate).build();
 
         return RetrievalAugmentationAdvisor.builder()
