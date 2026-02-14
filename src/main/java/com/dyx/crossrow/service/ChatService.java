@@ -89,7 +89,7 @@ public class ChatService {
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
                         new SimpleAuthAdvisor(),
-                        new SimpleQuotaAdvisor(5),
+                        new SimpleQuotaAdvisor(100),
                         MessageChatMemoryAdvisor.builder(chatMemory)
 //                              .conversationId() 设置会话id
                                 .build(),

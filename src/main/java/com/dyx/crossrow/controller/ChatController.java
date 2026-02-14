@@ -22,7 +22,7 @@ public class ChatController {
      * @param userId user id
      * @return LLM text
      */
-    @GetMapping("/crossrow/chat/simple")
+    @GetMapping("/crossrow/chat/simple/sync")
     public String simpleChatSync(@RequestParam("message") String message,
                              @RequestParam("chatId") String chatId,
                              @RequestParam ("userId") String userId) {
@@ -36,7 +36,7 @@ public class ChatController {
      * @param userId user id
      * @return LLM text in streaming form
      */
-    @GetMapping(value = "/crossrow/chat/simple", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(value = "/crossrow/chat/simple/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> simpleChatAsync(@RequestParam("message") String message,
                                         @RequestParam("chatId") String chatId,
                                         @RequestParam ("userId") String userId) {

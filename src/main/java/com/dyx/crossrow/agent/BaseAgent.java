@@ -9,9 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * BaseAgent class, implement agent loop:
@@ -39,11 +42,10 @@ public abstract class BaseAgent {
     private List<Message> messageList = new ArrayList<>();
 
     /**
-     *
      * @param userPrompt user input
      * @return execution result
      */
-    public String run(String userPrompt ) {
+    public String run(String userPrompt) {
         //check exceptions
         if (this.state != AgentState.IDLE) {
             throw new AgentStateException(this.state);
@@ -75,10 +77,10 @@ public abstract class BaseAgent {
 
             return String.join("\n", results);
 
-        } catch (Exception e){
+        } catch (Exception e) {
             this.state = AgentState.ERROR;
-        log.error("Error: agent can't execute, {}", e.getMessage());
-        return "Error: agent can't execute, " + e.getMessage();
+            log.error("Error: agent can't execute, {}", e.getMessage());
+            return "Error: agent can't execute, " + e.getMessage();
         } finally {
             clean();
         }
@@ -86,6 +88,7 @@ public abstract class BaseAgent {
 
     /**
      * Single step
+     *
      * @return result
      */
     public abstract String step();
@@ -93,7 +96,7 @@ public abstract class BaseAgent {
     /**
      * clean resources
      */
-    protected void clean(){
+    protected void clean() {
         log.debug("Cleaning agent [{}] resources, previous state: {}", this.name, this.state);
 
         this.state = AgentState.IDLE;
@@ -104,5 +107,74 @@ public abstract class BaseAgent {
         }
 
         log.debug("Agent [{}] cleaned successfully", this.name);
+    }
+
+    /**
+     * @param userPrompt user input
+     * @return execution result in streaming form
+     */
+    public SseEmitter runStream(String userPrompt) {
+        SseEmitter emitter = new SseEmitter(330000L);
+        CompletableFuture.runAsync(() ->
+                {
+                    try {
+                        //check exceptions
+                        if (this.state != AgentState.IDLE) {
+                            emitter.send("ERROR: CAN'T RUN PROXY IN STATE" + this.state);
+                            emitter.complete();
+                            return;                        }
+                        if (StrUtil.isEmpty(userPrompt)) {
+                            emitter.send("ERROR: EMPTY PROMPT");
+                            emitter.complete();
+                            return;                        }
+                        // change state
+                        this.state = AgentState.RUNNING;
+                        //save context and result
+                        messageList.add(new UserMessage(userPrompt));
+                    } catch (Exception e){
+                        emitter.completeWithError(e);
+                    }
+                    //  execute
+                    List<String> results = new ArrayList<>();
+                    try {
+                        for (int i = 0; i < maxStep && this.state != AgentState.FINISHED; i++) {
+                            currentStep = i + 1;
+                            log.info("Step: {}/{}", currentStep, maxStep);
+                            // get result from single step
+                            String stepResult = step();
+                            results.add("Step: " + currentStep + ":" + stepResult);
+                            emitter.send("Step: " + currentStep + ":" + stepResult);
+                        }
+
+                        //CHECK STATUS
+                        if (currentStep >= maxStep) {
+                            this.state = AgentState.FINISHED;
+                            results.add("Finished: reached max steps");
+                            emitter.send("Terminated: Reached maximum step: "+ maxStep);
+                            log.info("Agent Finished");
+                        }
+                        // successfully terminated
+                        emitter.complete();
+                    } catch (Exception e) {
+                        this.state = AgentState.ERROR;
+                        log.error("Error: agent can't execute, {}", e.getMessage());
+                        emitter.completeWithError(e);
+                    } finally {
+                        clean();
+                    }
+                });
+        emitter.onTimeout(() -> {
+            this.state = AgentState.ERROR;
+            clean();
+            log.warn("SSE connection timeout");
+        });
+        emitter.onCompletion(() -> {
+            if (this.state != AgentState.FINISHED) {
+                this.state = AgentState.FINISHED;
+            }
+            clean();
+            log.info("Agent [{}] terminated, SSE finished", this.name);
+        });
+        return emitter;
     }
 }
