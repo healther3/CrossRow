@@ -24,6 +24,7 @@ import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 
 
 import java.util.ArrayList;
@@ -298,5 +299,24 @@ public class ChatService {
         chatMemory.add(chatId, updatedMemory);
 
         return response;
+    }
+
+    /**
+     * chat with language model that has memory,
+     * streaming output
+     *
+     * @param message user given message
+     * @param chatId  chat conversation ID
+     * @return information in chat
+     */
+    public Flux<String> doChatStream(String message, String chatId, String userId) {
+        return  chatClient
+                .prompt()
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
+                .stream()
+                .content();
+
     }
 }
