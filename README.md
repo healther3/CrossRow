@@ -5,8 +5,9 @@ A Spring Boot AI application that combines LLM capabilities with RAG (Retrieval 
 > **Status**:  Under Active Development
 
 ## Todo List
-- [ ] implement tool class that help agent retrieve documents from elastic search
+- [ ] implement tool class that let agent ask human if they can't answer the question
 - [ ] implement tool class that enable agent to access/modify documents
+- [ ] implement tool class that enable agent throw options for human to choose
 - [ ] implement full frontend/backend service
 ## Overview
 
