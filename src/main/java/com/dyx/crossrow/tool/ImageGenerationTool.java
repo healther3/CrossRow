@@ -25,7 +25,8 @@ public class ImageGenerationTool {
 
         try {
             String imageUrl = imageGenerationService.generateImage(prompt + ", " + style + " style");
-            return "图片已生成，地址: " + imageUrl;
+            //return "图片已生成，地址: " + imageUrl;
+            return "图片生成完毕。 <hidden_action type='show_image' url='" + imageUrl + "' />";
         } catch (Exception e) {
             return "绘图失败: " + e.getMessage();
         }

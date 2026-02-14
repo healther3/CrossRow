@@ -48,9 +48,15 @@ public class RedisChatMemory implements ChatMemory {
                 existingMessages = existingMessages.subList(size - maxMessages, size);
             }
 
-            // 添加新消息
+            // 添加新消息（只添加有有效内容的消息）
             for (Message message : messages) {
-                existingMessages.add(messageToMap(message));
+                String content = message.getText();
+                // 跳过没有文本内容的消息（如只有 toolCalls 的 AssistantMessage 或 ToolResponseMessage）
+                if (content != null && !content.trim().isEmpty()) {
+                    existingMessages.add(messageToMap(message));
+                } else {
+                    log.debug("Skipping message with empty content, type: {}", message.getMessageType());
+                }
             }
 
             // 保存回 Redis
@@ -72,6 +78,7 @@ public class RedisChatMemory implements ChatMemory {
             List<Map<String, Object>> messagesData = getMessagesFromRedis(key);
             return messagesData.stream()
                     .map(this::mapToMessage)
+                    .filter(Objects::nonNull)  // 过滤掉无效消息（内容为空的消息）
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Failed to get messages for conversation: {}", conversationId, e);
@@ -104,8 +111,15 @@ public class RedisChatMemory implements ChatMemory {
     private Map<String, Object> messageToMap(Message message) {
         Map<String, Object> map = new HashMap<>();
         map.put("type", message.getMessageType().name());
-        map.put("content", message.getText());
+        
+        // 获取消息内容，处理可能为 null 的情况
+        String content = message.getText();
+        map.put("content", content);
         map.put("timestamp", System.currentTimeMillis());
+        
+        // 标记消息是否有有效内容（用于过滤）
+        map.put("hasContent", content != null && !content.trim().isEmpty());
+        
         return map;
     }
 
@@ -113,8 +127,9 @@ public class RedisChatMemory implements ChatMemory {
         String type = (String) map.get("type");
         String content = (String) map.get("content");
 
-        if (content == null) {
-            content = "";
+        // 如果内容为空，返回 null，后续会被过滤掉
+        if (content == null || content.trim().isEmpty()) {
+            return null;
         }
 
         return switch (type) {

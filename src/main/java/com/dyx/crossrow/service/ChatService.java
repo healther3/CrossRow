@@ -24,6 +24,7 @@ import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 
@@ -318,5 +319,35 @@ public class ChatService {
                 .stream()
                 .content();
 
+    }
+
+    public SseEmitter doChatWithCrossRowAgentStream(String message, String chatId, String userId) {
+        log.info("开始 Agent 对话流 - User: {}, Session: {}", userId, chatId);
+
+        //  通过工厂创建一个干净的、绑定了当前用户的 Agent
+        CrossRowAgent agent = agentFactory.createAgent(userId, chatId);
+
+        //  从 Redis 中提取历史记忆
+        List<Message> history = chatMemory.get(chatId);
+        if (!history.isEmpty()) {
+            // 将历史记忆“装载”进 Agent 的大脑 (messageList)
+            agent.setMessageList(new ArrayList<>(history));
+            log.info("成功加载历史记忆，共 {} 条", history.size());
+        }
+
+        // 让 Agent 开始推理想象并执行工具 (它会自动将新问题 add 进 messageList)
+        // 使用回调在 Agent 完成后保存内存，避免异步执行时机问题
+        SseEmitter response = agent.runStream(message, () -> {
+            // 提取 Agent 思考完毕后的完整大脑状态
+            List<Message> updatedMemory = agent.getMessageList();
+
+            // 保存回 Redis (注意：你的 RedisChatMemory.add 是追加逻辑，如果传入全量 list 会导致重复。
+            // 所以我们先 clear 掉旧的，再存入新的全量历史，或者你可以在 RedisChatMemory 里优化一下合并逻辑)
+            chatMemory.clear(chatId);
+            chatMemory.add(chatId, updatedMemory);
+            log.info("Agent 完成，已保存 {} 条消息到内存", updatedMemory.size());
+        });
+
+        return response;
     }
 }

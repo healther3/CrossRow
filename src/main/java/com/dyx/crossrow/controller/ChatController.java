@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 @RestController
@@ -41,6 +42,13 @@ public class ChatController {
                                         @RequestParam("chatId") String chatId,
                                         @RequestParam ("userId") String userId) {
         return chatService.doChatStream(message, chatId, userId);
+    }
+
+    @GetMapping(value = "/crossrow/agent/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatWithCrossRowAgent(@RequestParam("message") String message,
+                                           @RequestParam("chatId") String chatId,
+                                           @RequestParam ("userId") String userId) {
+        return chatService.doChatWithCrossRowAgentStream(message, chatId, userId);
     }
 
 

@@ -33,6 +33,9 @@ public class ToolCallAgent extends ReActAgent{
     private final SimpleToolCallManager toolCallingManager;
     private final ToolChoice toolChoice;
     private final ToolCallStrategy toolCallStrategy;
+    
+    // 临时保存当前步骤的思考结果，用于返回给调用方
+    private transient String currentThinkingResult;
 
     public ToolCallAgent(ToolCallback[] toolCallbacks, List<String> specialToolNames,
                          SimpleToolCallManager toolCallingManager, ToolChoice toolChoice,
@@ -44,6 +47,11 @@ public class ToolCallAgent extends ReActAgent{
         this.toolCallingManager = toolCallingManager;
         this.toolChoice = toolChoice;
         this.toolCallStrategy = toolCallStrategy;
+    }
+    
+    @Override
+    protected String getThinkingResult() {
+        return this.currentThinkingResult;
     }
 
     /**
@@ -57,6 +65,17 @@ public class ToolCallAgent extends ReActAgent{
         if (StrUtil.isNotBlank(getNextStepPrompt())){
             currentMessages.add(new UserMessage(getNextStepPrompt()));
         }
+
+        // 检查消息列表是否为空，避免发送空请求给 Gemini API
+        if (currentMessages.isEmpty()) {
+            log.error("Message list is empty, cannot send request to LLM");
+            return false;
+        }
+
+        // 记录当前消息列表状态，便于调试
+        log.debug("Current messages count: {}, types: {}", 
+                currentMessages.size(),
+                currentMessages.stream().map(m -> m.getClass().getSimpleName()).toList());
 
         try {
             // load concatenated message list
@@ -94,6 +113,8 @@ public class ToolCallAgent extends ReActAgent{
             //load text result content
             String content = response.getResult().getOutput().getText();
             if (content == null) content = "";
+            // 保存思考结果，供 step() 返回给前端
+            this.currentThinkingResult = content;
             log.info("{}'s thoughts: {}", getName(), content);
 
             // output total number of tool used
@@ -171,4 +192,5 @@ public class ToolCallAgent extends ReActAgent{
             return "fail to use tool calling.";
         }
     }
+
 }

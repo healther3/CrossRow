@@ -14,9 +14,9 @@ public class ToolCallStrategy {
 
     public AssistantMessage processOneToolCalls(AssistantMessage original, ChatResponse response) {
         if (original.hasToolCalls() && original.getToolCalls().size() > 1) {
-            log.info("Stop multiple tool callings");
+            log.info("Stop multiple tool callings, keeping only the first one");
             return AssistantMessage.builder()
-                    .content(original.getText() != null ? original.getText() : "")
+                    .content(original.getText())  // 保持原始内容，不要转换 null 为空字符串
                     .toolCalls(List.of(original.getToolCalls().getFirst()))
                     .build();
         }

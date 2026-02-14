@@ -12,6 +12,9 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter.SseEventBuilder;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -111,28 +114,34 @@ public abstract class BaseAgent {
 
     /**
      * @param userPrompt user input
+     * @param onComplete callback to execute when agent finishes (for saving memory, etc.)
      * @return execution result in streaming form
      */
-    public SseEmitter runStream(String userPrompt) {
+    public SseEmitter runStream(String userPrompt, Runnable onComplete) {
         SseEmitter emitter = new SseEmitter(330000L);
         CompletableFuture.runAsync(() ->
                 {
                     try {
                         //check exceptions
                         if (this.state != AgentState.IDLE) {
-                            emitter.send("ERROR: CAN'T RUN PROXY IN STATE" + this.state);
+                            emitter.send(SseEmitter.event()
+                                    .data("ERROR: CAN'T RUN PROXY IN STATE " + this.state, MediaType.TEXT_PLAIN));
                             emitter.complete();
-                            return;                        }
+                            return;
+                        }
                         if (StrUtil.isEmpty(userPrompt)) {
-                            emitter.send("ERROR: EMPTY PROMPT");
+                            emitter.send(SseEmitter.event()
+                                    .data("ERROR: EMPTY PROMPT", MediaType.TEXT_PLAIN));
                             emitter.complete();
-                            return;                        }
+                            return;
+                        }
                         // change state
                         this.state = AgentState.RUNNING;
                         //save context and result
                         messageList.add(new UserMessage(userPrompt));
                     } catch (Exception e){
                         emitter.completeWithError(e);
+                        return;
                     }
                     //  execute
                     List<String> results = new ArrayList<>();
@@ -142,17 +151,35 @@ public abstract class BaseAgent {
                             log.info("Step: {}/{}", currentStep, maxStep);
                             // get result from single step
                             String stepResult = step();
-                            results.add("Step: " + currentStep + ":" + stepResult);
-                            emitter.send("Step: " + currentStep + ":" + stepResult);
+                            String stepMessage = "Step " + currentStep + ": " + stepResult;
+                            results.add(stepMessage);
+                            // 使用标准 SSE 格式发送
+                            emitter.send(SseEmitter.event()
+                                    .id(String.valueOf(currentStep))
+                                    .name("step")
+                                    .data(stepMessage, MediaType.TEXT_PLAIN));
                         }
 
                         //CHECK STATUS
                         if (currentStep >= maxStep) {
                             this.state = AgentState.FINISHED;
-                            results.add("Finished: reached max steps");
-                            emitter.send("Terminated: Reached maximum step: "+ maxStep);
+                            String finishMessage = "Terminated: Reached maximum step: " + maxStep;
+                            results.add(finishMessage);
+                            emitter.send(SseEmitter.event()
+                                    .name("complete")
+                                    .data(finishMessage, MediaType.TEXT_PLAIN));
                             log.info("Agent Finished");
                         }
+
+                        // 在完成前执行回调（保存内存等）
+                        if (onComplete != null) {
+                            try {
+                                onComplete.run();
+                            } catch (Exception e) {
+                                log.error("Error executing onComplete callback: {}", e.getMessage());
+                            }
+                        }
+
                         // successfully terminated
                         emitter.complete();
                     } catch (Exception e) {
