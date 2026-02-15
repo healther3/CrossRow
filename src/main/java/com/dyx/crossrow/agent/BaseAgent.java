@@ -151,7 +151,7 @@ public abstract class BaseAgent {
                             log.info("Step: {}/{}", currentStep, maxStep);
                             // get result from single step
                             String stepResult = step();
-                            String stepMessage = "Step " + currentStep + ": " + stepResult;
+                            String stepMessage = stepResult;
                             results.add(stepMessage);
                             // 使用标准 SSE 格式发送
                             emitter.send(SseEmitter.event()
