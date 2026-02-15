@@ -44,6 +44,13 @@ public class ChatController {
         return chatService.doChatStream(message, chatId, userId);
     }
 
+    /**
+     *
+     * @param message user prompt
+     * @param chatId conversation id
+     * @param userId userid
+     * @return agent text in sse form
+     */
     @GetMapping(value = "/crossrow/agent/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatWithCrossRowAgent(@RequestParam("message") String message,
                                            @RequestParam("chatId") String chatId,
