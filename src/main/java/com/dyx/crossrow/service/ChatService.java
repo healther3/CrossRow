@@ -44,8 +44,8 @@ public class ChatService {
     @jakarta.annotation.Resource
     private VectorStore vectorStore;
 
-    @jakarta.annotation.Resource(name = "ragAdvisor")
-    private Advisor ragAdvisor;
+//    @jakarta.annotation.Resource(name = "ragAdvisor")
+//    private Advisor ragAdvisor;
 
     @jakarta.annotation.Resource(name = "hybridRagAdvisor")
     private Advisor hybridRagAdvisor;
