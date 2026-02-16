@@ -4,6 +4,7 @@ import cn.hutool.core.io.resource.ClassPathResource;
 import com.dyx.crossrow.model.BackGroundMode;
 import com.dyx.crossrow.model.CityCoordinates;
 import com.dyx.crossrow.properties.ImageModelProperties;
+import com.dyx.crossrow.repository.CityRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
@@ -27,15 +28,19 @@ public class ImageGenerationService {
 
     private final Client genAiClient;
     private final ImageModelProperties imageModelProperties;
+    private final CityRepository cityRepository;
     @Value("${google.maps.api-key}")
     private String apiKey;
     private List<CityCoordinates> cityList;
 
     private final Random random = new Random();
 
-    public ImageGenerationService(Client genAiClient, ImageModelProperties imageModelProperties) {
+    public ImageGenerationService(Client genAiClient, ImageModelProperties imageModelProperties,
+                                  CityRepository cityRepository) {
         this.genAiClient = genAiClient;
         this.imageModelProperties = imageModelProperties;
+        this.cityRepository = cityRepository;
+        cityList = cityRepository.findCities();
     }
         public String generateImage(String prompt) {
             System.out.println("[Debug] 准备构建 Config...");
@@ -115,11 +120,22 @@ public class ImageGenerationService {
     }
 
     private String generatePureRandomLocation() {
-        double randomLat = -90 + (180 * random.nextDouble());
-        double randomLng = -180 + (360 * random.nextDouble());
+        if (cityList == null || cityList.isEmpty()) {
+            return "48.8584,2.2945"; // set a default place you like
+        }
+// 1. 随机选一个城市
+        CityCoordinates city = cityList.get(random.nextInt(cityList.size()));
 
-        // 保留6位小数，格式化为字符串
-        return String.format("%.6f,%.6f", randomLat, randomLng);
+        // 2. 添加随机偏移 (Jitter)
+        // 0.01 度大约是 1.11 公里。
+        // 我们在 +/- 0.03 度 (约3km) 范围内随机，这样既保证在城市里，又保证每次景色不同
+        double latOffset = (random.nextDouble() * 0.06) - 0.03;
+        double lngOffset = (random.nextDouble() * 0.06) - 0.03;
+
+        double finalLat = city.getLat() + latOffset;
+        double finalLng = city.getLng() + lngOffset;
+
+        return String.format("%.6f,%.6f", finalLat, finalLng);
     }
 
     private String buildGoogleUrl(String location) {
