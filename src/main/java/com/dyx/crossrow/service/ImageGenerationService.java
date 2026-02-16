@@ -12,8 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 public class ImageGenerationService {
     private final Client genAiClient;
     private final ImageModelProperties imageModelProperties;
