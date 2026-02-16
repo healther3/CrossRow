@@ -1,6 +1,6 @@
 package com.dyx.crossrow.exceptions;
 
-import com.dyx.crossrow.agent.model.AgentState;
+import com.dyx.crossrow.model.AgentState;
 
 public class AgentStateException extends RuntimeException{
 

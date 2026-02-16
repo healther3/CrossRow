@@ -1,7 +1,7 @@
 package com.dyx.crossrow.agent;
 
 import cn.hutool.core.util.StrUtil;
-import com.dyx.crossrow.agent.model.AgentState;
+import com.dyx.crossrow.model.AgentState;
 import com.dyx.crossrow.exceptions.AgentStateException;
 import com.dyx.crossrow.exceptions.EmptyUserPromptException;
 import lombok.Data;
@@ -10,10 +10,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.publisher.Flux;
 
 import org.springframework.http.MediaType;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter.SseEventBuilder;
 
 import java.util.ArrayList;
 import java.util.List;

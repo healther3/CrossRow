@@ -1,0 +1,29 @@
+package com.dyx.crossrow.controller;
+
+import com.dyx.crossrow.service.ImageGenerationService;
+import jakarta.annotation.Resource;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping
+public class ImageGenerationController {
+    @Resource
+    private ImageGenerationService imageGenerationService;
+
+    /**
+     * 获取风景背景图接口
+     * * 用法 1 (随机): GET /image/background
+     * 用法 2 (指定): GET /image/background?lat=31.23&lng=121.47
+     */
+    @GetMapping("/crossrow/image/background")
+    public String getStreetView(
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng
+    ) {
+        // 调用 Service 获取 URL 字符串
+        return imageGenerationService.generateWorldView(lat, lng);
+    }
+}

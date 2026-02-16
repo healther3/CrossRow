@@ -1,8 +1,8 @@
 package com.dyx.crossrow.agent;
 
 import cn.hutool.core.util.StrUtil;
-import com.dyx.crossrow.agent.model.AgentState;
-import com.dyx.crossrow.agent.model.ToolChoice;
+import com.dyx.crossrow.model.AgentState;
+import com.dyx.crossrow.model.ToolChoice;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import lombok.Data;
@@ -11,15 +11,12 @@ import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
