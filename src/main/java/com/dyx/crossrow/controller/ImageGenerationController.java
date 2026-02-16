@@ -16,8 +16,8 @@ public class ImageGenerationController {
 
     /**
      * 获取风景背景图接口
-     * * 用法 1 (随机): GET /image/background
-     * 用法 2 (指定): GET /image/background?lat=31.23&lng=121.47
+     * * 用法 1 (随机): GET /crossrow/image/background
+     * 用法 2 (指定): GET /crossrow/image/background?lat=31.23&lng=121.47&mode=USER/RANDOM
      */
     @GetMapping("/crossrow/image/background")
     public String getStreetView(

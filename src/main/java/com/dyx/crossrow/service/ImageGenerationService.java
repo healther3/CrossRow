@@ -1,11 +1,9 @@
 package com.dyx.crossrow.service;
 
-import cn.hutool.core.io.resource.ClassPathResource;
 import com.dyx.crossrow.model.BackGroundMode;
 import com.dyx.crossrow.model.CityCoordinates;
 import com.dyx.crossrow.properties.ImageModelProperties;
 import com.dyx.crossrow.repository.CityRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
@@ -17,11 +15,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Random;
-
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import tools.jackson.core.type.TypeReference;
 
 @Service
 public class ImageGenerationService {
@@ -29,7 +24,7 @@ public class ImageGenerationService {
     private final Client genAiClient;
     private final ImageModelProperties imageModelProperties;
     private final CityRepository cityRepository;
-    @Value("${google.maps.api-key}")
+   @Value("${google.maps.api-key}")
     private String apiKey;
     private List<CityCoordinates> cityList;
 
@@ -129,8 +124,8 @@ public class ImageGenerationService {
         // 2. 添加随机偏移 (Jitter)
         // 0.01 度大约是 1.11 公里。
         // 我们在 +/- 0.03 度 (约3km) 范围内随机，这样既保证在城市里，又保证每次景色不同
-        double latOffset = (random.nextDouble() * 0.06) - 0.03;
-        double lngOffset = (random.nextDouble() * 0.06) - 0.03;
+        double latOffset = (random.nextDouble() * 0.01) - 0.03;
+        double lngOffset = (random.nextDouble() * 0.01) - 0.03;
 
         double finalLat = city.getLat() + latOffset;
         double finalLng = city.getLng() + lngOffset;
@@ -140,8 +135,9 @@ public class ImageGenerationService {
 
     private String buildGoogleUrl(String location) {
         return String.format(
-                "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=%s&fov=120&pitch=10&source=outdoor&key=%s",
+                "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=%s&fov=120&heading=%d&pitch=10&radius=1000&source=outdoor&key=%s",
                 location,
+                new Random().nextInt(360),
                 apiKey
         );
     }
