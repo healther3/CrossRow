@@ -1,6 +1,10 @@
 package com.dyx.crossrow.service;
 
+import cn.hutool.core.io.resource.ClassPathResource;
+import com.dyx.crossrow.model.BackGroundMode;
+import com.dyx.crossrow.model.CityCoordinates;
 import com.dyx.crossrow.properties.ImageModelProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
@@ -10,12 +14,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
 
 @Service
 public class ImageGenerationService {
@@ -24,20 +29,9 @@ public class ImageGenerationService {
     private final ImageModelProperties imageModelProperties;
     @Value("${google.maps.api-key}")
     private String apiKey;
+    private List<CityCoordinates> cityList;
 
     private final Random random = new Random();
-
-    // 预定义的高质量风景坐标池 (避免随机到大海)
-    // 格式：纬度,经度
-    private final List<String> SCENIC_SPOTS = Arrays.asList(
-            "35.3606,138.7274",   // 富士山 (Mt. Fuji)
-            "48.8584,2.2945",     // 埃菲尔铁塔 (Eiffel Tower)
-            "40.6892,-74.0445",   // 自由女神像 (Statue of Liberty)
-            "-33.8568,151.2153",  // 悉尼歌剧院 (Sydney Opera House)
-            "27.1751,78.0421",    // 泰姬陵 (Taj Mahal)
-            "37.9715,23.7257",    // 雅典卫城 (Acropolis of Athens)
-            "29.9792,31.1342"     // 吉萨金字塔 (Pyramids of Giza)
-    );
 
     public ImageGenerationService(Client genAiClient, ImageModelProperties imageModelProperties) {
         this.genAiClient = genAiClient;
@@ -93,23 +87,48 @@ public class ImageGenerationService {
         }
     }
 
-    public String generateWorldView(Double lat, Double lng) {
+    public String generateWorldView(Double lat, Double lng, BackGroundMode mode) {
         String location;
-        // 1. 判断逻辑：如果有坐标，用坐标；没坐标，随机挑一个
-        if (lat != null && lng != null) {
-            location = lat + "," + lng;
-        } else {
-            location = SCENIC_SPOTS.get(random.nextInt(SCENIC_SPOTS.size()));
+
+        switch (mode) {
+            case USER:
+                // 物理坐标模式：必须校验参数
+                if (lat == null || lng == null) {
+                    // 如果用户选了物理坐标但没传，降级为伪随机
+                    location = generatePureRandomLocation();
+                } else {
+                    location = lat + "," + lng;
+                }
+                break;
+
+            case RANDOM:
+                // 纯随机模式：数学随机
+                location = generatePureRandomLocation();
+                break;
+                default:
+                // 默认伪随机
+                location = generatePureRandomLocation();
+                break;
         }
 
-        // 2. 构建 URL
-        // heading: 调整朝向 (可选，这里不传默认对着路)
-        // pitch: 10 (稍微仰视，更有代入感)
-        // fov: 120 (广角)
+        return buildGoogleUrl(location);
+    }
+
+    private String generatePureRandomLocation() {
+        double randomLat = -90 + (180 * random.nextDouble());
+        double randomLng = -180 + (360 * random.nextDouble());
+
+        // 保留6位小数，格式化为字符串
+        return String.format("%.6f,%.6f", randomLat, randomLng);
+    }
+
+    private String buildGoogleUrl(String location) {
         return String.format(
-                "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=%s&fov=120&pitch=10&key=%s",
+                "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=%s&fov=120&pitch=10&source=outdoor&key=%s",
                 location,
                 apiKey
         );
     }
+
+
 }

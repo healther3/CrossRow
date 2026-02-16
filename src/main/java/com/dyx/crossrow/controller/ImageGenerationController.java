@@ -1,5 +1,6 @@
 package com.dyx.crossrow.controller;
 
+import com.dyx.crossrow.model.BackGroundMode;
 import com.dyx.crossrow.service.ImageGenerationService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,9 +22,10 @@ public class ImageGenerationController {
     @GetMapping("/crossrow/image/background")
     public String getStreetView(
             @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lng
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) BackGroundMode mode
     ) {
         // 调用 Service 获取 URL 字符串
-        return imageGenerationService.generateWorldView(lat, lng);
+        return imageGenerationService.generateWorldView(lat, lng, mode);
     }
 }
