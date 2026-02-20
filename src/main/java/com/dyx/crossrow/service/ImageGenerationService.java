@@ -100,7 +100,15 @@ public class ImageGenerationService {
                     location = lat + "," + lng;
                 }
                 break;
-
+            case URBAN:
+                    location = getRandomLocationByType("URBAN");
+                    break;
+            case NATURE:
+                location = getRandomLocationByType("NATURE");
+                break;
+            case LANDMARK:
+                location = getRandomLocationByType("LANDMARK");
+                break;
             case RANDOM:
                 // 纯随机模式：数学随机
                 location = generatePureRandomLocation();
@@ -140,6 +148,34 @@ public class ImageGenerationService {
                 new Random().nextInt(360),
                 apiKey
         );
+    }
+
+    private String getRandomLocationByType(String type) {
+        // avoid empty
+        if (cityList == null || cityList.isEmpty()) {
+            return "48.8584,2.2945"; // set a default place you like
+        }
+
+        // get a pool of all the target type city
+        List<CityCoordinates> filteredList = cityList.stream()
+                .filter(city -> type.equals(city.getType()))
+                .toList();
+
+        // avoid empty
+        if (filteredList.isEmpty()) {
+            filteredList = cityList;
+        }
+
+        CityCoordinates city = filteredList.get(random.nextInt(filteredList.size()));
+
+        // return http file
+        double latOffset = (random.nextDouble() * 0.002) - 0.001;
+        double lngOffset = (random.nextDouble() * 0.002) - 0.001;
+
+        double finalLat = city.getLat() + latOffset;
+        double finalLng = city.getLng() + lngOffset;
+
+        return String.format("%.6f,%.6f", finalLat, finalLng);
     }
 
 
