@@ -49,7 +49,7 @@ public class JwtInterceptor implements HandlerInterceptor {
         try {
             Claims claims = jwtUtils.parseToken(token);
             // 3. 拿到护照里的 userId，戴上“工作牌”
-            Long userId = claims.get("userId", Long.class);
+            String userId = claims.get("userId", String.class);
             if (userId == null) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "unknown user");
                 return false;

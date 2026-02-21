@@ -29,11 +29,15 @@ public class CrossRowAgent extends ToolCallAgent{
     @jakarta.annotation.Resource(name = "hybridRagAdvisor")
     private final Advisor hybridRagAdvisor;
 
+    @jakarta.annotation.Resource
+    private final SimpleAuthAdvisor simpleAuthAdvisor;
+
     public CrossRowAgent(ToolCallback[] allTools,
                          List<String> specialToolNames,
                          SimpleToolCallManager toolCallingManager,
                          ToolCallStrategy toolCallStrategy,
                          ChatModel chatModel,
+                         SimpleAuthAdvisor simpleAuthAdvisor,
                          @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                          @Value("classpath:/prompts/next-step-prompt.st") Resource nextStepPromptResource,
                          @Qualifier("hybridRagAdvisor") Advisor hybridRagAdvisor) {
@@ -43,6 +47,7 @@ public class CrossRowAgent extends ToolCallAgent{
                 ToolChoice.AUTO,
                 toolCallStrategy);
         this.hybridRagAdvisor = hybridRagAdvisor;
+        this.simpleAuthAdvisor = simpleAuthAdvisor;
 
         // set name
         setName("NoName");
@@ -62,7 +67,7 @@ public class CrossRowAgent extends ToolCallAgent{
         ChatClient chatClient = ChatClient.builder(chatModel)
                 .defaultSystem(getSystemPrompt())
                 .defaultAdvisors(
-                        new SimpleAuthAdvisor(),
+                        simpleAuthAdvisor,
                         new SimpleQuotaAdvisor(5),
                         // customized logger advisor
                         new MyLogAdvisor(100)

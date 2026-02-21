@@ -23,7 +23,7 @@ public class SimpleAuthAdvisor implements BaseAdvisor {
     @Override
     public ChatClientRequest before(ChatClientRequest request, AdvisorChain chain) {
         // 前置校验
-        Long userId = (Long) request.context().get("userId");
+        String userId = (String) request.context().get("userId");
 
         if (userId == null || userRepository.findById(userId).isEmpty()) {
             throw new UserAuthDeniedException(String.valueOf(userId));

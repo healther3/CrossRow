@@ -21,7 +21,7 @@ public class UserController {
     @GetMapping("/background")
     public ResponseEntity<String> getBackground() {
         // 1. 从“工作牌”中获取当前是谁在发请求
-        Long userId = UserContext.getUserId();
+        String userId = UserContext.getUserId();
 
         // 2. 去数据库查这个人的信息
         User user = userRepository.findById(userId)
@@ -41,7 +41,7 @@ public class UserController {
     public ResponseEntity<String> uploadBackground(@RequestParam("file") MultipartFile file) {
         try {
             // 1. 拿到当前用户 ID
-            Long userId = UserContext.getUserId();
+            String userId = UserContext.getUserId();
 
             // 2. 调用刚才写好的 GCS 服务，把文件传到 Google 云端
             String gcsUrl = fileUploadService.uploadBackground(file);

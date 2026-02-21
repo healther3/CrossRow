@@ -62,20 +62,24 @@ public class ChatService {
 
     @jakarta.annotation.Resource
     private ChatMemory chatMemory;
+
+    @jakarta.annotation.Resource
+    private final SimpleAuthAdvisor simpleAuthAdvisor;
+
     /**
      * initalize the app(memory based)
      *
      * @param chatModel Gemini chat model
      */
     public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
-                       AgentFactory agentFactory, ChatMemory chatMemory) {
+                       AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor) {
 
         // get template from resource
         this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
         // get factory
         this.agentFactory = agentFactory;
         this.chatMemory = chatMemory;
-
+        this.simpleAuthAdvisor = simpleAuthAdvisor;
 //            基于文件保存 chat memory
 //            String fileDir = System.getProperty("user.dir")+"/tmp/chat-memory";
 //            ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
@@ -90,7 +94,7 @@ public class ChatService {
         chatClient = ChatClient.builder(chatModel)
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
-                        new SimpleAuthAdvisor(),
+                        simpleAuthAdvisor,
                         new SimpleQuotaAdvisor(100),
                         MessageChatMemoryAdvisor.builder(chatMemory)
 //                              .conversationId() 设置会话id

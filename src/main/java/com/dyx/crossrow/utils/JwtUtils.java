@@ -21,7 +21,7 @@ public class JwtUtils {
     // 24 hours expiration
     private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24;
 
-    public String generateToken(Long userId, String username) {
+    public String generateToken(String userId, String username) {
         return Jwts.builder()
                 .subject(username)                 // 设置主题
                 .claim("userId", userId)           //把 userId 塞进 Token 里，以后非常方便获取
