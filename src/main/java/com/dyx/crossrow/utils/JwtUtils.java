@@ -1,5 +1,6 @@
 package com.dyx.crossrow.utils;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,5 +29,13 @@ public class JwtUtils {
                 .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // 过期时间
                 .signWith(SECRET_KEY)              // 签名
                 .compact();
+    }
+
+    public Claims parseToken(String token) {
+        return Jwts.parser()
+                .verifyWith(SECRET_KEY)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }
