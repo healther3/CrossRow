@@ -124,7 +124,7 @@ public class ImageGenerationService {
 
     private String generatePureRandomLocation() {
         if (cityList == null || cityList.isEmpty()) {
-            return "48.8584,2.2945"; // set a default place you like
+            return "default_location"; // set a default place you like
         }
 // 1. 随机选一个城市
         CityCoordinates city = cityList.get(random.nextInt(cityList.size()));
@@ -142,6 +142,10 @@ public class ImageGenerationService {
     }
 
     private String buildGoogleUrl(String location) {
+        if(location.equals("default_location"))
+        {
+            return "/api/images/default_BG.jpg";
+        }
         return String.format(
                 "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=%s&fov=120&heading=%d&pitch=10&radius=1000&source=outdoor&key=%s",
                 location,
@@ -153,7 +157,7 @@ public class ImageGenerationService {
     private String getRandomLocationByType(String type) {
         // avoid empty
         if (cityList == null || cityList.isEmpty()) {
-            return "48.8584,2.2945"; // set a default place you like
+            return "default_location"; // set a default place you like
         }
 
         // get a pool of all the target type city

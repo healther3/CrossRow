@@ -1,5 +1,7 @@
 package com.dyx.crossrow.advisor;
 import com.dyx.crossrow.exceptions.UserAuthDeniedException;
+import com.dyx.crossrow.repository.UserRepository;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -13,18 +15,19 @@ import java.util.Set;
 @Slf4j
 @Component
 public class SimpleAuthAdvisor implements BaseAdvisor {
-    private static final Set<String> ALLOWED_USERS = Set.of("user1", "admin");
+    @Resource
+    private UserRepository userRepository;
+
     private int order = Ordered.HIGHEST_PRECEDENCE;
 
     @Override
     public ChatClientRequest before(ChatClientRequest request, AdvisorChain chain) {
         // 前置校验
-        String userId = (String) request.context().get("userId");
+        Long userId = (Long) request.context().get("userId");
 
-        if (userId == null || !ALLOWED_USERS.contains(userId)) {
-            throw new UserAuthDeniedException(userId);
+        if (userId == null || userRepository.findById(userId).isEmpty()) {
+            throw new UserAuthDeniedException(String.valueOf(userId));
         }
-
         // 可以修改 request 并返回
         return request;
     }

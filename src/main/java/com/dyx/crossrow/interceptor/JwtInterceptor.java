@@ -29,14 +29,23 @@ public class JwtInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 1. 从请求头中获取 Authorization 字段
+        String token = null;
+
+        // 1. 从请求头中获取 TOKEN
         String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No authorization bearer wrong format");
+        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
+            token = authHeader.substring(BEARER_PREFIX.length());
+        }
+
+        if (token == null || token.trim().isEmpty()) {
+            token = request.getParameter("token");
+        }
+
+        if (token == null || token.trim().isEmpty()) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No token found in Header or URL parameter");
             return false;
         }
-        // 2. 提取 Token 并解析 (去掉 "Bearer " 前缀)
-        String token = authHeader.substring(BEARER_PREFIX.length());
+
         try {
             Claims claims = jwtUtils.parseToken(token);
             // 3. 拿到护照里的 userId，戴上“工作牌”
