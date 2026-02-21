@@ -177,7 +177,7 @@ public class ToolCallAgent extends ReActAgent{
             }
             // return the collected tool calling result
             String results = toolResponseMessage.getResponses().stream()
-                    .map(response -> "tool:  " + response.name() + "  result:" + response.responseData())
+                    .map(response -> "tool:  " + response.name() + "  result: \n" + response.responseData())
                     .collect(Collectors.joining("\n"));
             log.info(results);
             return results;

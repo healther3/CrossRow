@@ -3,6 +3,10 @@ spring:
     name: CrossRow
   profiles:
     active: local
+  servlet:
+    multipart:
+      max-file-size: 10MB     # 单个文件的最大限制 (默认是 1MB)
+      max-request-size: 15MB
 server:
   port: 8123
   servlet:

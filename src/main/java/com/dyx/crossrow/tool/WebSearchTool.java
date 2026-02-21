@@ -47,7 +47,7 @@ public class WebSearchTool {
                     String title = item.path("title").asText();
                     String desc = item.path("description").asText();
                     String link = item.path("url").asText();
-                    resultBuilder.append(String.format("%d. 标题: %s\n   摘要: %s\n   链接: %s\n\n",
+                    resultBuilder.append(String.format("%d. Topic: %s\n   abstract: %s\n   link: %s\n",
                             index++, title, desc, link));
                 }
             } else {

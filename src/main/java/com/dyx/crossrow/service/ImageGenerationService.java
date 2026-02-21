@@ -4,6 +4,10 @@ import com.dyx.crossrow.model.BackGroundMode;
 import com.dyx.crossrow.model.CityCoordinates;
 import com.dyx.crossrow.properties.ImageModelProperties;
 import com.dyx.crossrow.repository.CityRepository;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
@@ -15,6 +19,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +32,10 @@ public class ImageGenerationService {
     private final CityRepository cityRepository;
    @Value("${google.maps.api-key}")
     private String apiKey;
+   @Value("${google.cloud.storage.bucket-name}")
+   private String bucketName;
+
+    private final Storage storage = StorageOptions.getDefaultInstance().getService();
     private List<CityCoordinates> cityList;
 
     private final Random random = new Random();
@@ -71,19 +81,18 @@ public class ImageGenerationService {
         }
     private String saveImage(byte[] data) {
         try {
-            // 检查路径
-            Path dir = Paths.get(imageModelProperties.getSavePath());
-            if (!Files.exists(dir)) {
-                Files.createDirectories(dir);
-            }
-            // 创建唯一路径
-            String fileName = "gemini_" + System.currentTimeMillis() + ".png";
-            Path filePath = dir.resolve(fileName);
-            //保存
-            Files.write(filePath, data);
-            return filePath.toString();
-        } catch (IOException e) {
-            throw new RuntimeException("图片保存失败", e);
+            String uniqueFileName = "ai-generated/gemini_" + UUID.randomUUID().toString() + ".png";
+
+            BlobId blobId = BlobId.of(bucketName, uniqueFileName);
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                    .setContentType("image/png") // Gemini 生成的默认是 PNG
+                    .build();
+
+            storage.create(blobInfo, data);
+            return String.format("https://storage.googleapis.com/%s/%s", bucketName, uniqueFileName);
+
+        } catch (Exception e){
+            throw new RuntimeException("upload to GCS failed", e);
         }
     }
 
