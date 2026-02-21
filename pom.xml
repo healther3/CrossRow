@@ -196,6 +196,11 @@
             <artifactId>google-cloud-discoveryengine</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
+        </dependency>
+
         <!-- Source: https://mvnrepository.com/artifact/com.google.genai/google-genai -->
         <dependency>
             <groupId>com.google.genai</groupId>
@@ -241,6 +246,7 @@
             <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
+
     </dependencies>
 
     <repositories>
