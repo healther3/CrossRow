@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.model.AgentState;
 import com.dyx.crossrow.exceptions.AgentStateException;
 import com.dyx.crossrow.exceptions.EmptyUserPromptException;
+import com.dyx.crossrow.utils.UserContext;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -117,9 +118,11 @@ public abstract class BaseAgent {
      */
     public SseEmitter runStream(String userPrompt, Runnable onComplete) {
         SseEmitter emitter = new SseEmitter(330000L);
+        final String capturedUserId = this.userId;
         CompletableFuture.runAsync(() ->
                 {
                     try {
+                        UserContext.setUserId(capturedUserId);
                         //check exceptions
                         if (this.state != AgentState.IDLE) {
                             emitter.send(SseEmitter.event()
@@ -185,6 +188,7 @@ public abstract class BaseAgent {
                         log.error("Error: agent can't execute, {}", e.getMessage());
                         emitter.completeWithError(e);
                     } finally {
+                        UserContext.clear();
                         clean();
                     }
                 });
