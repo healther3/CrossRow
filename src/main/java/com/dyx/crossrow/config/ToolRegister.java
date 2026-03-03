@@ -1,14 +1,13 @@
 package com.dyx.crossrow.config;
 
+import com.dyx.crossrow.elasticsearch.ElasticsearchDocumentStore;
 import com.dyx.crossrow.properties.SearchEngineProperties;
 import com.dyx.crossrow.retriever.HybridDocumentRetriever;
 import com.dyx.crossrow.service.ImageGenerationService;
-import com.dyx.crossrow.tool.ImageGenerationTool;
-import com.dyx.crossrow.tool.PhilosophyRetrieveTool;
-import com.dyx.crossrow.tool.TerminateTool;
-import com.dyx.crossrow.tool.WebSearchTool;
+import com.dyx.crossrow.tool.*;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -38,15 +37,22 @@ public class ToolRegister {
     }
 
     @Bean
+    public UpdateUserMemoryTool updateUserMemoryTool(ElasticsearchDocumentStore elasticsearchDocumentStore){
+        return new UpdateUserMemoryTool(elasticsearchDocumentStore);
+    }
+
+    @Bean
     public ToolCallback[] allTools(WebSearchTool webSearchTool,
                                    ImageGenerationTool imageGenerationTool,
                                    TerminateTool terminateTool,
-                                   PhilosophyRetrieveTool philosophyRetrieveTool){
+                                   PhilosophyRetrieveTool philosophyRetrieveTool,
+                                    UpdateUserMemoryTool updateUserMemoryTool){
         return ToolCallbacks.from(
                 webSearchTool,
                imageGenerationTool,
                 terminateTool,
-                philosophyRetrieveTool
+                philosophyRetrieveTool,
+                updateUserMemoryTool
         );
     }
 }
