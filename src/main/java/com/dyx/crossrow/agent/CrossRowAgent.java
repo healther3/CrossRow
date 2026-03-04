@@ -42,7 +42,7 @@ public class CrossRowAgent extends ToolCallAgent{
                          @Value("classpath:/prompts/next-step-prompt.st") Resource nextStepPromptResource,
                          @Qualifier("hybridRagAdvisor") Advisor hybridRagAdvisor) {
         super(  allTools,
-                List.of(),
+                List.of("askHuman"),
                 toolCallingManager,
                 ToolChoice.AUTO,
                 toolCallStrategy);
