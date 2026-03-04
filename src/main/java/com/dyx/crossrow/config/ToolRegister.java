@@ -42,17 +42,24 @@ public class ToolRegister {
     }
 
     @Bean
+    public AskHumanTool askHumanTool(){
+        return new AskHumanTool();
+    }
+
+    @Bean
     public ToolCallback[] allTools(WebSearchTool webSearchTool,
                                    ImageGenerationTool imageGenerationTool,
                                    TerminateTool terminateTool,
                                    PhilosophyRetrieveTool philosophyRetrieveTool,
-                                    UpdateUserMemoryTool updateUserMemoryTool){
+                                    UpdateUserMemoryTool updateUserMemoryTool,
+                                   AskHumanTool askHumanTool){
         return ToolCallbacks.from(
                 webSearchTool,
                imageGenerationTool,
                 terminateTool,
                 philosophyRetrieveTool,
-                updateUserMemoryTool
+                updateUserMemoryTool,
+                askHumanTool
         );
     }
 }
