@@ -138,7 +138,8 @@ public class ToolCallAgent extends ReActAgent{
         }catch (Exception e){
             // print error info
             log.error("{}'s thinking process encountered an error: {}", getName(), e.getMessage());
-            getMessageList().add(new AssistantMessage("Error encountered while processing: " + e.getMessage()));
+            // save error message
+            this.currentThinkingResult = "Error: " + e.getMessage();
             // get error message
             String errorFeedback = String.format(
                     "SYSTEM FEEDBACK: The tool execution failed with error: '%s'. " +
