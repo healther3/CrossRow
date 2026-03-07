@@ -31,7 +31,7 @@ public class CrossRowDocumentLoader {
      * @return list of files
      */
 
-    public List<Document> loadMarkDownFiles() {
+    public List<Document> loadMarkDownFiles(String domain) {
         List<Document> allFiles = new ArrayList<>();
 
         // 作为后备，当单个问答对太长时使用
@@ -43,7 +43,8 @@ public class CrossRowDocumentLoader {
                 .build();
 
         try {
-            Resource[] resources = resourcePatternResolver.getResources("classpath:documents/*.md");
+            String pattern = "classpath:documents/" + domain + "/*.md";
+            Resource[] resources = resourcePatternResolver.getResources(pattern);
             for(Resource resource : resources) {
                 String fileName = resource.getFilename();
                 MarkdownDocumentReaderConfig config = MarkdownDocumentReaderConfig.builder()
@@ -51,6 +52,7 @@ public class CrossRowDocumentLoader {
                         .withIncludeCodeBlock(false)
                         .withIncludeBlockquote(false)
                         .withAdditionalMetadata("filename", fileName)
+                        .withAdditionalMetadata("domain", domain)
                         .build();
                 MarkdownDocumentReader markdownDocumentReader = new MarkdownDocumentReader(resource, config);
                 List<Document> docs = markdownDocumentReader.read();
@@ -102,7 +104,7 @@ public class CrossRowDocumentLoader {
      * 为文档添加来源信息
      */
     private Document enrichDocument(Document chunk, String fileName) {
-        String enrichedContent = "[文档来源: " + fileName + "]\n\n" + chunk.getText();
+        String enrichedContent = "[Source: " + fileName + "]\n\n" + chunk.getText();
         return Document.builder()
                 .text(enrichedContent)
                 .metadata(chunk.getMetadata())
