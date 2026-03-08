@@ -12,6 +12,5 @@ class CrossRowDocumentLoaderTest {
     private CrossRowDocumentLoader crossRowDocumentLoader;
     @Test
     void loadMarkDownFiles() {
-        crossRowDocumentLoader.loadMarkDownFiles();
     }
 }

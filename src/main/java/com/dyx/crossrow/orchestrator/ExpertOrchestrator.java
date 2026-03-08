@@ -79,10 +79,14 @@ public class ExpertOrchestrator {
                     .call()
                     .content();
 
-            log.debug("Router response: {}", response);
+            log.debug("Router raw response: {}", response);
+
+            // Clean markdown code blocks if present
+            String cleanedResponse = cleanJsonResponse(response);
+            log.debug("Router cleaned response: {}", cleanedResponse);
 
             // Parse JSON response
-            JsonNode json = objectMapper.readTree(response);
+            JsonNode json = objectMapper.readTree(cleanedResponse);
             String expert = json.get("expert").asText().toLowerCase();
             String reason = json.has("reason") ? json.get("reason").asText() : "N/A";
 
@@ -100,6 +104,30 @@ public class ExpertOrchestrator {
             log.error("Router failed to parse response, falling back to {}: {}", DEFAULT_DOMAIN, e.getMessage());
             return DEFAULT_DOMAIN;
         }
+    }
+
+    /**
+     * Remove markdown code block wrappers from LLM response
+     */
+    private String cleanJsonResponse(String response) {
+        if (response == null) {
+            return "{}";
+        }
+        String cleaned = response.trim();
+        
+        // Remove ```json or ``` at the beginning
+        if (cleaned.startsWith("```json")) {
+            cleaned = cleaned.substring(7);
+        } else if (cleaned.startsWith("```")) {
+            cleaned = cleaned.substring(3);
+        }
+        
+        // Remove ``` at the end
+        if (cleaned.endsWith("```")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 3);
+        }
+        
+        return cleaned.trim();
     }
 
     /**

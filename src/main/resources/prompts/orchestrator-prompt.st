@@ -17,7 +17,7 @@ Analyze the user's question and determine which expert should respond. Output ON
 4. If ambiguous, prefer the domain that addresses the ROOT cause, not surface symptoms
 
 ## Output Format
-Output ONLY a valid JSON object, nothing else:
+Output ONLY a raw JSON object. Do NOT wrap it in markdown code blocks (no ```json or ```).
 \{"expert": "philosophy or psychology or sociology", "reason": "one sentence explanation"\}
 
 ## Examples
