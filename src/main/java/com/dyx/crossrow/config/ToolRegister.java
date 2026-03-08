@@ -7,7 +7,7 @@ import com.dyx.crossrow.service.ImageGenerationService;
 import com.dyx.crossrow.tool.*;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,7 +32,7 @@ public class ToolRegister {
     }
 
     @Bean
-    public PhilosophyRetrieveTool philosophyRetrieveTool(HybridDocumentRetriever hybridDocumentRetriever){
+    public PhilosophyRetrieveTool philosophyRetrieveTool(@Qualifier("philosophyRetriever") HybridDocumentRetriever hybridDocumentRetriever){
         return new PhilosophyRetrieveTool(hybridDocumentRetriever);
     }
 

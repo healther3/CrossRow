@@ -68,7 +68,7 @@ public class HybridRagConfiguration {
      * @return  混合检索advisor
      */
     @Bean
-    public Advisor hybridRagAdvisor(HybridDocumentRetriever hybridRetriever,
+    public Advisor hybridRagAdvisor(@org.springframework.beans.factory.annotation.Qualifier("philosophyRetriever") HybridDocumentRetriever hybridRetriever,
                                     ChatClient.Builder chatClientBuilder,
                                     @Value("classpath:/prompts/rag-retrieve-answer-prompt.st") Resource ragPromptResource){
         // 聚合转换器
