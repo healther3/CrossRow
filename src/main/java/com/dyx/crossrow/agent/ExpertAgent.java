@@ -35,7 +35,7 @@ public class ExpertAgent extends ToolCallAgent {
                        Resource systemPromptResource,
                        Resource nextStepPromptResource) {
         super(domainTools,
-              List.of("askHuman"),
+              List.of("askHuman","terminate"),
               toolCallingManager,
               ToolChoice.AUTO,
               toolCallStrategy);
