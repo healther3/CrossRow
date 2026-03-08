@@ -4,7 +4,9 @@ import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.agent.CrossRowAgent;
+import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
+import com.dyx.crossrow.orchestrator.ExpertOrchestrator;
 import com.dyx.crossrow.tool.ImageGenerationTool;
 import com.dyx.crossrow.tool.WebSearchTool;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -64,12 +66,15 @@ public class ChatService {
     @jakarta.annotation.Resource
     private final SimpleAuthAdvisor simpleAuthAdvisor;
 
+    @jakarta.annotation.Resource
+    private ExpertOrchestrator expertOrchestrator;
+
     /**
      * initalize the app(memory based)
      *
      * @param chatModel Gemini chat model
      */
-    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/orchestrator-prompt.st") Resource systemPromptResource,
+    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                        AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor) {
 
         // get template from resource
@@ -352,5 +357,47 @@ public class ChatService {
         });
 
         return response;
+    }
+
+    /**
+     * Multi-Agent Expert mode: routes to appropriate expert (philosophy/psychology/sociology)
+     * @param message user prompt
+     * @param chatId conversation id
+     * @param userId user id
+     * @return expert agent response in SSE form
+     */
+    public SseEmitter doChatWithExpertStream(String message, String chatId, String userId) {
+        log.info("开始 Expert 对话流 - User: {}, Session: {}", userId, chatId);
+
+        // 1. 先让 Orchestrator 判断路由到哪个专家
+        String domain = expertOrchestrator.previewRoute(message);
+        log.info("路由决策: {} 专家", domain);
+
+        // 2. 创建对应的专家 Agent
+        ExpertAgent expert = agentFactory.createExpertAgent(domain, userId, chatId);
+
+        // 3. 从 Redis 中提取历史记忆
+        List<Message> history = chatMemory.get(chatId);
+        if (!history.isEmpty()) {
+            expert.setMessageList(new ArrayList<>(history));
+            log.info("成功加载历史记忆，共 {} 条", history.size());
+        }
+
+        // 4. 执行专家 Agent，完成后保存记忆
+        SseEmitter response = expert.runStream(message, () -> {
+            List<Message> updatedMemory = expert.getMessageList();
+            chatMemory.clear(chatId);
+            chatMemory.add(chatId, updatedMemory);
+            log.info("{} 专家完成，已保存 {} 条消息到内存", domain, updatedMemory.size());
+        });
+
+        return response;
+    }
+
+    /**
+     * Preview which expert would handle the query (for testing)
+     */
+    public String previewExpert(String message) {
+        return expertOrchestrator.previewRoute(message);
     }
 }

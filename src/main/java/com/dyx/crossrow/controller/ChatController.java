@@ -58,7 +58,25 @@ public class ChatController {
         return chatService.doChatWithCrossRowAgentStream(message, chatId, userId);
     }
 
+    /**
+     * Multi-agent endpoint: routes to appropriate expert (philosophy/psychology/sociology)
+     * @param message user prompt
+     * @param chatId conversation id
+     * @param userId user id
+     * @return expert agent response in sse form
+     */
+    @GetMapping(value = "/crossrow/expert/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatWithExpert(@RequestParam("message") String message,
+                                     @RequestParam("chatId") String chatId,
+                                     @RequestParam("userId") String userId) {
+        return chatService.doChatWithExpertStream(message, chatId, userId);
+    }
 
-
-
+    /**
+     * Preview which expert would handle the query (for testing)
+     */
+    @GetMapping("/crossrow/expert/preview")
+    public String previewExpert(@RequestParam("message") String message) {
+        return chatService.previewExpert(message);
+    }
 }
