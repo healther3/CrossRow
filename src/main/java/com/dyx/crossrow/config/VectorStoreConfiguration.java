@@ -24,7 +24,9 @@ public class VectorStoreConfiguration {
     VectorStore CrossRowVectorStore(EmbeddingModel embeddingModel) {
         SimpleVectorStore simpleVectorStore = SimpleVectorStore.builder(embeddingModel)
                 .build();
-        List<Document> documents = crossRowDocumentLoader.loadMarkDownFiles();
+        //List<Document> documents = crossRowDocumentLoader.loadMarkDownFiles();
+        List<Document> documents = null;
+
         for (int i = 0; i < documents.size(); i += 2) {
             int end = Math.min(documents.size(), i + 2);
             List<Document> batch = documents.subList(i, end);

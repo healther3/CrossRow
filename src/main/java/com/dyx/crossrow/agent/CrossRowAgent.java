@@ -32,13 +32,13 @@ public class CrossRowAgent extends ToolCallAgent{
     @jakarta.annotation.Resource
     private final SimpleAuthAdvisor simpleAuthAdvisor;
 
-    public CrossRowAgent(ToolCallback[] allTools,
+    public CrossRowAgent(@Qualifier("allTools") ToolCallback[] allTools,
                          List<String> specialToolNames,
                          SimpleToolCallManager toolCallingManager,
                          ToolCallStrategy toolCallStrategy,
                          ChatModel chatModel,
                          SimpleAuthAdvisor simpleAuthAdvisor,
-                         @Value("classpath:/prompts/orchestrator-prompt.st") Resource systemPromptResource,
+                         @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                          @Value("classpath:/prompts/next-step-prompt.st") Resource nextStepPromptResource,
                          @Qualifier("hybridRagAdvisor") Advisor hybridRagAdvisor) {
         super(  allTools,

@@ -47,14 +47,14 @@ public class PgVectorConfiguration {
 
     }
 
-        @Bean
-        @org.springframework.context.annotation.Profile("!test")  // 测试时不运行
-        public ApplicationRunner documentLoader(VectorStore pgVectorStore, CrossRowDocumentLoader crossRowDocumentLoader) {
-            return args -> {
-                List<Document> documents = crossRowDocumentLoader.loadMarkDownFiles();
-                List<Document> enrichedDocuments = simpleKeyWordEnricher.enrichDocuments(documents);
-                pgVectorStore.add(enrichedDocuments);
-                    System.out.println("文档加载完成，共 " + documents.size() + " 条");
-            };
-        }
+//        @Bean
+//        @org.springframework.context.annotation.Profile("!test")  // 测试时不运行
+//        public ApplicationRunner documentLoader(VectorStore pgVectorStore, CrossRowDocumentLoader crossRowDocumentLoader) {
+//            return args -> {
+//                List<Document> documents = crossRowDocumentLoader.loadMarkDownFiles();
+//                List<Document> enrichedDocuments = simpleKeyWordEnricher.enrichDocuments(documents);
+//                pgVectorStore.add(enrichedDocuments);
+//                    System.out.println("文档加载完成，共 " + documents.size() + " 条");
+//            };
+//        }
 }

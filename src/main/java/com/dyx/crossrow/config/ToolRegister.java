@@ -57,7 +57,7 @@ public class ToolRegister {
     }
 
     // 通用工具（所有 Agent 共享）
-    @Bean
+    @Bean("sharedTools")
     public ToolCallback[] sharedTools(WebSearchTool webSearchTool,
                                       ImageGenerationTool imageGenerationTool,
                                       TerminateTool terminateTool,
@@ -73,29 +73,29 @@ public class ToolRegister {
     }
 
     // Philosophy Agent 专用工具集
-    @Bean
-    public ToolCallback[] philosophyTools(ToolCallback[] sharedTools,
+    @Bean("philosophyTools")
+    public ToolCallback[] philosophyTools(@Qualifier("sharedTools") ToolCallback[] sharedTools,
                                           PhilosophyRetrieveTool philosophyRetrieveTool){
         return mergeTools(sharedTools, ToolCallbacks.from(philosophyRetrieveTool));
     }
 
     // Psychology Agent 专用工具集
-    @Bean
-    public ToolCallback[] psychologyTools(ToolCallback[] sharedTools,
+    @Bean("psychologyTools")
+    public ToolCallback[] psychologyTools(@Qualifier("sharedTools") ToolCallback[] sharedTools,
                                           PsychologyRetrieveTool psychologyRetrieveTool){
         return mergeTools(sharedTools, ToolCallbacks.from(psychologyRetrieveTool));
     }
 
     // Sociology Agent 专用工具集
-    @Bean
-    public ToolCallback[] sociologyTools(ToolCallback[] sharedTools,
+    @Bean("sociologyTools")
+    public ToolCallback[] sociologyTools(@Qualifier("sharedTools") ToolCallback[] sharedTools,
                                          SociologyRetrieveTool sociologyRetrieveTool){
         return mergeTools(sharedTools, ToolCallbacks.from(sociologyRetrieveTool));
     }
 
     // 保留原有的 allTools 用于兼容 CrossRowAgent
-    @Bean
-    public ToolCallback[] allTools(ToolCallback[] sharedTools,
+    @Bean("allTools")
+    public ToolCallback[] allTools(@Qualifier("sharedTools") ToolCallback[] sharedTools,
                                    PhilosophyRetrieveTool philosophyRetrieveTool){
         return mergeTools(sharedTools, ToolCallbacks.from(philosophyRetrieveTool));
     }

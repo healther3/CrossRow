@@ -28,16 +28,15 @@ public class ExpertOrchestrator {
 
     public ExpertOrchestrator(ChatModel chatModel,
                               AgentFactory agentFactory,
-                              @Value("classpath:/prompts/orchestrator-prompt.st") Resource orchestratorPrompt) {
+                              @Value("classpath:/prompts/orchestrator-prompt.st") Resource orchestratorPromptResource) {
         this.agentFactory = agentFactory;
         this.objectMapper = new ObjectMapper();
 
         // Build router client with orchestrator prompt
-        SystemPromptTemplate promptTemplate = new SystemPromptTemplate(orchestratorPrompt);
-        String systemPrompt = promptTemplate.render();
+        SystemPromptTemplate promptTemplate = new SystemPromptTemplate(orchestratorPromptResource);
 
         this.routerClient = ChatClient.builder(chatModel)
-                .defaultSystem(systemPrompt)
+                .defaultSystem(promptTemplate.render())
                 .build();
     }
 

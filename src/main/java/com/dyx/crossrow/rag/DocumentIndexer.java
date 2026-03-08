@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Service
+// @Service  // 已禁用，文档加载由 ElasticSearchLoaderConfiguration 处理
 @Slf4j
 @RequiredArgsConstructor
-@org.springframework.context.annotation.Profile("!test")  // 测试时不运行
+@org.springframework.context.annotation.Profile("!test")
 public class DocumentIndexer implements ApplicationRunner {
 
     private final ElasticsearchDocumentStore documentStore;
@@ -32,7 +32,9 @@ public class DocumentIndexer implements ApplicationRunner {
         indexManager.ensureIndexExists();
 
         //  加载文档
-        List<Document> documents = documentLoader.loadMarkDownFiles();
+        //List<Document> documents = documentLoader.loadMarkDownFiles();
+        List<Document> documents = null;
+
         if (documents.isEmpty()) {
             log.warn(" 未发现待处理的 Markdown 文件，跳过索引流程");
             return;
