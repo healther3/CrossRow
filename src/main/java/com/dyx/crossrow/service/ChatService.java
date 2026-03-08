@@ -17,13 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
@@ -71,7 +69,7 @@ public class ChatService {
      *
      * @param chatModel Gemini chat model
      */
-    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
+    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/orchestrator-prompt.st") Resource systemPromptResource,
                        AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor) {
 
         // get template from resource
