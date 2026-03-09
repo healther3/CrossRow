@@ -5,6 +5,7 @@ A Spring Boot AI application that combines LLM capabilities with RAG (Retrieval 
 > **Status**:  Under Active Development
 
 ## Todo List
+- [ ] Persistence of conversation sessions allows users to have multiple different conversations with isolation.
 - [ ] implement tool class that enable agent to access/modify documents
 - [ ] implement full frontend/backend service
 - [ ] Add separate model calls and isolation for tenants.
