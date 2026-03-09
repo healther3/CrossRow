@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
 
     }
     @ExceptionHandler(ReActProcessingException.class)
-    public ResponseEntity<Map<String, Object>> ReActProcessingException(EmptyUserPromptException e) {
+    public ResponseEntity<Map<String, Object>> ReActProcessingException(ReActProcessingException e) {
         log.warn("ReAct failed: {}", e.getMessage());  // 只记录简单日志
 
         Map<String, Object> response = Map.of(
@@ -60,6 +60,19 @@ public class GlobalExceptionHandler {
                 "error", e.getMessage()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+
+    }
+
+    @ExceptionHandler(SessionAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> SessionAccessDeniedException(SessionAccessDeniedException e) {
+        log.warn("ReAct failed: {}", e.getMessage());  // 只记录简单日志
+
+        Map<String, Object> response = Map.of(
+                "success", false,
+                "error", e.getMessage(),
+                "userId", e.getUserId() != null ? e.getUserId() : "unknown"
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 
     }
 }
