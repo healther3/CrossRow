@@ -4,6 +4,7 @@ import com.dyx.crossrow.exceptions.SessionAccessDeniedException;
 import com.dyx.crossrow.model.ChatSession;
 import com.dyx.crossrow.repository.ChatSessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 public class ChatSessionService {
 
     private final ChatSessionRepository sessionRepository;
+    private final ChatMemory chatMemory;
 
     /**
      * 创建新会话
@@ -25,25 +27,17 @@ public class ChatSessionService {
     }
 
     /**
-     * 获取或创建会话（确保会话属于当前用户）
+     * 获取会话（确保会话属于当前用户）
      */
-    public ChatSession getOrCreateSession(String chatId, String userId) {
+    public ChatSession getSession(String chatId, String userId) {
         return sessionRepository.findById(chatId)
                 .map(session -> {
-                    // 校验会话归属
                     if (!session.getUserId().equals(userId)) {
-                        throw new SessionAccessDeniedException("无权访问此会话",userId);
+                        throw new SessionAccessDeniedException("无权访问此会话", userId);
                     }
                     return session;
                 })
-                .orElseGet(() -> {
-                    // 首次使用此 chatId，创建新会话
-                    ChatSession session = new ChatSession();
-                    session.setId(chatId);
-                    session.setUserId(userId);
-                    session.setTitle("新对话");
-                    return sessionRepository.save(session);
-                });
+                .orElseThrow(() -> new SessionAccessDeniedException("会话不存在", userId));
     }
 
     /**
@@ -81,7 +75,8 @@ public class ChatSessionService {
      */
     public void deleteSession(String chatId, String userId) {
         ChatSession session = sessionRepository.findByIdAndUserId(chatId, userId)
-                .orElseThrow(() -> new SessionAccessDeniedException("无权访问此会话",userId));
+                .orElseThrow(() -> new SessionAccessDeniedException("无权访问此会话", userId));
         sessionRepository.delete(session);
+        chatMemory.clear(chatId);
     }
 }
