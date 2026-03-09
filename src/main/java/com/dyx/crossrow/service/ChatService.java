@@ -6,6 +6,7 @@ import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
+import com.dyx.crossrow.model.ChatSession;
 import com.dyx.crossrow.orchestrator.ExpertOrchestrator;
 import com.dyx.crossrow.tool.ImageGenerationTool;
 import com.dyx.crossrow.tool.WebSearchTool;
@@ -62,6 +63,9 @@ public class ChatService {
     @jakarta.annotation.Resource
     private ExpertOrchestrator expertOrchestrator;
 
+    @jakarta.annotation.Resource
+    private ChatSessionService chatSessionService;
+
     /**
      * initalize the app(memory based)
      *
@@ -115,6 +119,7 @@ public class ChatService {
      * @return information in chat
      */
     public String doChat(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
         ChatClientResponse chatClientResponse = chatClient
                 .prompt()
                 .user(message)
@@ -143,6 +148,7 @@ public class ChatService {
      * @return ai response with report
      */
     public PainReport doChatReport(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
         PainReport painReport = chatClient
                 .prompt()
                 .system(systemPromptTemplate.render() + "***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
@@ -165,6 +171,7 @@ public class ChatService {
      * @return ai response
      */
     public String doChatWithRag(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
         VertexAiGeminiChatOptions options = VertexAiGeminiChatOptions.builder()
                 .googleSearchRetrieval(false)
                 .build();
@@ -276,6 +283,7 @@ public class ChatService {
     }
 
     public  String doChatWithCrossRowAgent(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
         log.info("开始 Agent 对话流 - User: {}, Session: {}", userId, chatId);
 
         //  通过工厂创建一个干净的、绑定了当前用户的 Agent
@@ -312,6 +320,7 @@ public class ChatService {
      * @return information in chat
      */
     public Flux<String> doChatStream(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
         return  chatClient
                 .prompt()
                 .user(message)
@@ -323,6 +332,7 @@ public class ChatService {
     }
 
     public SseEmitter doChatWithCrossRowAgentStream(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
         log.info("开始 Agent 对话流 - User: {}, Session: {}", userId, chatId);
 
         //  通过工厂创建一个干净的、绑定了当前用户的 Agent
@@ -360,6 +370,7 @@ public class ChatService {
      * @return expert agent response in SSE form
      */
     public SseEmitter doChatWithExpertStream(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
         log.info("开始 Expert 对话流 - User: {}, Session: {}", userId, chatId);
 
         // 1. 先让 Orchestrator 判断路由到哪个专家
