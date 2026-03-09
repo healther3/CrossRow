@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Configuration
 public class ElasticSearchLoaderConfiguration {
@@ -63,8 +64,9 @@ public class ElasticSearchLoaderConfiguration {
                 esDoc.setId(doc.getId());
                 esDoc.setContent(doc.getText());
                 esDoc.setMetadata(doc.getMetadata());
-                // 假设你的 CrossRowDocument 有个字段存向量，比如 setEmbedding(List<Float>...)
-                // esDoc.setEmbedding(toList(embedding));
+                esDoc.setEmbedding(IntStream.range(0, embedding.length)
+                        .mapToObj(i -> embedding[i])
+                        .toList());
 
                 esClient.index(i -> i
                         .index(indexName)

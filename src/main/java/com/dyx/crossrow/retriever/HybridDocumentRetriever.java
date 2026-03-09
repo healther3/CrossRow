@@ -114,6 +114,7 @@ public class HybridDocumentRetriever implements DocumentRetriever {
                         .queryVector(queryVector)
                         .k(50)
                         .numCandidates(100)
+                        .filter(accessControlQuery)
                 )
                 // RRF 融合两种查询方式 -> 付费功能
 //                .rank(r -> r
