@@ -11,6 +11,8 @@ A Spring Boot AI application that combines LLM capabilities with RAG (Retrieval 
 - [ ] Add separate model calls and isolation for tenants.
 - [ ] Implement hot restart for appropriate services such as tenant model configuration.
 - [ ] To enable on-demand and configuration-based invocation of multiple models, a routing class and interface need to be implemented.
+- [ ] Complete SSE data streaming information : step_type, tool_name，tool_arguments, tool_result, token_usage,  progress, elapsed_ms, status...
+
 ## Overview
 
 CrossRow is an AI-powered "Rational Life Strategist" that helps users navigate real-world challenges by combining:
