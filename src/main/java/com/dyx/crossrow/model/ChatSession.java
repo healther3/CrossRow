@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 })
 public class ChatSession {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;  // chatId
 
     @Column(name = "user_id", nullable = false)
