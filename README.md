@@ -12,6 +12,11 @@ A Spring Boot AI application that combines LLM capabilities with RAG (Retrieval 
 - [ ] Implement hot restart for appropriate services such as tenant model configuration.
 - [ ] To enable on-demand and configuration-based invocation of multiple models, a routing class and interface need to be implemented.
 - [ ] Complete SSE data streaming information : step_type, tool_name，tool_arguments, tool_result, token_usage,  progress, elapsed_ms, status...
+- [ ] Add multimodal calling interface
+- [ ] Add a more robust reflection mechanism: Pre-Retrieval: Query Rewrite/HyDE/Query Routing + Retrieval (Finished) + Post-Retrieval (Rerank/Context Compression) + Generation: Strict Prompting & Fallback
+- [ ] Using ragas/TruLens to evaluate the quality of the generated responses
+- [ ] Compress expired memory contexts/RAG retrievals, determine their validity, and persist them.
+- [ ] Build a more accurate and superior RAG index, and if possible, add evaluation.
 
 ## Overview
 
