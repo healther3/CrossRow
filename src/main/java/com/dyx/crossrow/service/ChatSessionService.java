@@ -2,9 +2,11 @@ package com.dyx.crossrow.service;
 
 import com.dyx.crossrow.exceptions.SessionAccessDeniedException;
 import com.dyx.crossrow.model.ChatSession;
+import com.dyx.crossrow.model.dto.ChatMessageDTO;
 import com.dyx.crossrow.repository.ChatSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -78,5 +80,19 @@ public class ChatSessionService {
                 .orElseThrow(() -> new SessionAccessDeniedException("无权访问此会话", userId));
         sessionRepository.delete(session);
         chatMemory.clear(chatId);
+    }
+
+    /**
+     * 获取会话的聊天历史记录
+     */
+    public List<ChatMessageDTO> getChatHistory(String chatId, String userId) {
+        validateSessionOwnership(chatId, userId);
+        List<Message> messages = chatMemory.get(chatId);
+        return messages.stream()
+                .map(msg -> new ChatMessageDTO(
+                        msg.getMessageType().name().toLowerCase(),
+                        msg.getText()
+                ))
+                .toList();
     }
 }
