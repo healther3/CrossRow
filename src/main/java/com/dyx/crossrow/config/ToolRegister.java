@@ -93,11 +93,18 @@ public class ToolRegister {
         return mergeTools(sharedTools, ToolCallbacks.from(sociologyRetrieveTool));
     }
 
-    // 保留原有的 allTools 用于兼容 CrossRowAgent
+    // 包含所有工具，用于 SimpleToolCallManager 执行工具调用
     @Bean("allTools")
     public ToolCallback[] allTools(@Qualifier("sharedTools") ToolCallback[] sharedTools,
-                                   PhilosophyRetrieveTool philosophyRetrieveTool){
-        return mergeTools(sharedTools, ToolCallbacks.from(philosophyRetrieveTool));
+                                   PhilosophyRetrieveTool philosophyRetrieveTool,
+                                   PsychologyRetrieveTool psychologyRetrieveTool,
+                                   SociologyRetrieveTool sociologyRetrieveTool){
+        ToolCallback[] domainTools = ToolCallbacks.from(
+                philosophyRetrieveTool,
+                psychologyRetrieveTool,
+                sociologyRetrieveTool
+        );
+        return mergeTools(sharedTools, domainTools);
     }
 
     private ToolCallback[] mergeTools(ToolCallback[] base, ToolCallback[] additional) {
