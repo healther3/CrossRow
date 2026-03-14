@@ -22,6 +22,9 @@ public class User {
     @Column(name = "custom_background_url", length = 500)
     private String customBackgroundUrl;
 
+    @Column(name = "preferred_model", length = 20)
+    private String preferredModel = "gemini";
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
