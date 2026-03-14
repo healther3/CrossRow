@@ -36,7 +36,7 @@ public class CrossRowAgent extends ToolCallAgent{
                          List<String> specialToolNames,
                          SimpleToolCallManager toolCallingManager,
                          ToolCallStrategy toolCallStrategy,
-                         ChatModel chatModel,
+                         @Qualifier("vertexAiGeminiChat") ChatModel chatModel,
                          SimpleAuthAdvisor simpleAuthAdvisor,
                          @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                          @Value("classpath:/prompts/next-step-prompt.st") Resource nextStepPromptResource,

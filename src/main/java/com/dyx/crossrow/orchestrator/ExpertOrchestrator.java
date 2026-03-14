@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
+/**
+ * Orchestrator for routing user queries to appropriate expert agents.
+ * Always uses Gemini model for routing decisions (better reasoning capabilities).
+ */
 @Slf4j
 @Component
 public class ExpertOrchestrator {
@@ -26,13 +31,12 @@ public class ExpertOrchestrator {
     private static final List<String> VALID_DOMAINS = List.of("philosophy", "psychology", "sociology");
     private static final String DEFAULT_DOMAIN = "philosophy";
 
-    public ExpertOrchestrator(ChatModel chatModel,
+    public ExpertOrchestrator(@Qualifier("vertexAiGeminiChat") ChatModel chatModel,
                               AgentFactory agentFactory,
                               @Value("classpath:/prompts/orchestrator-prompt.st") Resource orchestratorPromptResource) {
         this.agentFactory = agentFactory;
         this.objectMapper = new ObjectMapper();
 
-        // Build router client with orchestrator prompt
         SystemPromptTemplate promptTemplate = new SystemPromptTemplate(orchestratorPromptResource);
 
         this.routerClient = ChatClient.builder(chatModel)

@@ -3,9 +3,9 @@ package com.dyx.crossrow.factory;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
+import com.dyx.crossrow.service.ChatModelProvider;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -13,13 +13,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
+/**
+ * Factory for creating Agent instances.
+ * Uses ChatModelProvider to get Gemini model for all agents (better reasoning capabilities).
+ */
 @Component
 public class AgentFactory {
     private final ObjectProvider<CrossRowAgent> crossRowAgentProvider;
     private final SimpleToolCallManager toolCallingManager;
     private final ToolCallStrategy toolCallStrategy;
-    private final ChatModel chatModel;
     private final SimpleAuthAdvisor simpleAuthAdvisor;
+    private final ChatModelProvider chatModelProvider;
 
     // Domain-specific tools
     private final ToolCallback[] philosophyTools;
@@ -35,8 +39,8 @@ public class AgentFactory {
     public AgentFactory(ObjectProvider<CrossRowAgent> crossRowAgentProvider,
                         SimpleToolCallManager toolCallingManager,
                         ToolCallStrategy toolCallStrategy,
-                        ChatModel chatModel,
                         SimpleAuthAdvisor simpleAuthAdvisor,
+                        ChatModelProvider chatModelProvider,
                         @Qualifier("philosophyTools") ToolCallback[] philosophyTools,
                         @Qualifier("psychologyTools") ToolCallback[] psychologyTools,
                         @Qualifier("sociologyTools") ToolCallback[] sociologyTools,
@@ -47,8 +51,8 @@ public class AgentFactory {
         this.crossRowAgentProvider = crossRowAgentProvider;
         this.toolCallingManager = toolCallingManager;
         this.toolCallStrategy = toolCallStrategy;
-        this.chatModel = chatModel;
         this.simpleAuthAdvisor = simpleAuthAdvisor;
+        this.chatModelProvider = chatModelProvider;
         this.philosophyTools = philosophyTools;
         this.psychologyTools = psychologyTools;
         this.sociologyTools = sociologyTools;
@@ -98,7 +102,7 @@ public class AgentFactory {
                 tools,
                 toolCallingManager,
                 toolCallStrategy,
-                chatModel,
+                chatModelProvider.getGeminiModel(),
                 simpleAuthAdvisor,
                 prompt,
                 nextStepPrompt
