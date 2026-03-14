@@ -33,15 +33,19 @@ public class JwtInterceptor implements HandlerInterceptor {
 
         // 1. 从请求头中获取 TOKEN
         String authHeader = request.getHeader("Authorization");
+        log.debug("Request URI: {}, Authorization Header: {}", request.getRequestURI(), authHeader);
+        
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             token = authHeader.substring(BEARER_PREFIX.length());
         }
 
         if (token == null || token.trim().isEmpty()) {
             token = request.getParameter("token");
+            log.debug("Token from URL parameter: {}", token != null ? "present" : "null");
         }
 
         if (token == null || token.trim().isEmpty()) {
+            log.warn("No token found for request: {}", request.getRequestURI());
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No token found in Header or URL parameter");
             return false;
         }

@@ -1,12 +1,10 @@
 package com.dyx.crossrow.controller;
 
 import com.dyx.crossrow.service.ChatService;
+import com.dyx.crossrow.service.ModelRouterService;
 import jakarta.annotation.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
@@ -79,4 +77,49 @@ public class ChatController {
     public String previewExpert(@RequestParam("message") String message) {
         return chatService.previewExpert(message);
     }
+
+    // ==================== Model Router APIs ====================
+
+    /**
+     * 智能路由流式聊天：AI 自动评审任务复杂度并选择模型
+     * - 简单任务 → Qwen（成本低）
+     * - 复杂任务 → Gemini（能力强）
+     */
+    @GetMapping(value = "/crossrow/chat/auto-route/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> chatWithAutoRoute(@RequestParam("message") String message,
+                                          @RequestParam("chatId") String chatId,
+                                          @RequestParam("userId") String userId) {
+        return chatService.doChatStreamWithAutoRoute(message, chatId, userId);
+    }
+
+    /**
+     * 使用指定模型流式聊天
+     * @param modelName 模型名称: gemini / qwen
+     */
+    @GetMapping(value = "/crossrow/chat/model/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> chatWithModel(@RequestParam("message") String message,
+                                      @RequestParam("chatId") String chatId,
+                                      @RequestParam("userId") String userId,
+                                      @RequestParam("model") String modelName) {
+        return chatService.doChatWithModel(message, chatId, userId, modelName);
+    }
+
+    /**
+     * 预览任务评审结果（用于调试/前端展示）
+     * 返回 AI 对任务复杂度的判断
+     */
+    @GetMapping("/crossrow/route/preview")
+    public ModelRouterService.TaskReview previewRoute(@RequestParam("message") String message) {
+        return chatService.reviewTask(message);
+    }
+
+    /**
+     * 获取完整的路由决策信息
+     * 包含评审结果和最终选择的模型
+     */
+    @GetMapping("/crossrow/route/decision")
+    public ModelRouterService.RouteDecision getRouteDecision(@RequestParam("message") String message) {
+        return chatService.previewRoute(message);
+    }
+
 }

@@ -403,50 +403,6 @@ public class ChatService {
         return expertOrchestrator.previewRoute(message);
     }
 
-    /**
-     * 智能路由聊天：使用 AI 评审判断任务复杂度，自动选择模型
-     * - 简单任务：使用 Qwen（成本低）
-     * - 复杂任务/图片/代码等：使用 Gemini（能力强）
-     *
-     * @param message 用户消息
-     * @param chatId  会话ID
-     * @param userId  用户ID
-     * @return AI 响应
-     */
-    public String doChatWithAutoRoute(String message, String chatId, String userId) {
-        chatSessionService.validateSessionOwnership(chatId, userId);
-        
-        RouteDecision decision = modelRouterService.getRouteDecision(message);
-        log.info("AI评审路由决策: 复杂度={}, 原因={}, 类别={}, 选择模型={}",
-                decision.review().isComplex() ? "复杂" : "简单",
-                decision.review().reason(),
-                decision.review().category(),
-                decision.selectedModel());
-
-        ChatModel selectedModel = modelRouterService.route(message);
-        
-        ChatClient routedClient = ChatClient.builder(selectedModel)
-                .defaultSystem(systemPromptTemplate.render())
-                .defaultAdvisors(
-                        simpleAuthAdvisor,
-                        new SimpleQuotaAdvisor(100),
-                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        new MyLogAdvisor(100)
-                )
-                .build();
-
-        ChatClientResponse chatClientResponse = routedClient
-                .prompt()
-                .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
-                        .param("userId", userId))
-                .call()
-                .chatClientResponse();
-
-        String content = chatClientResponse.chatResponse().getResult().getOutput().getText();
-        log.info("路由聊天完成，使用模型: {}, 响应长度: {}", decision.selectedModel(), content.length());
-        return content;
-    }
 
     /**
      * 智能路由流式聊天：使用 AI 评审自动选择模型
@@ -501,7 +457,7 @@ public class ChatService {
      * @param modelName 模型名称 (gemini/qwen)
      * @return AI 响应
      */
-    public String doChatWithModel(String message, String chatId, String userId, String modelName) {
+    public Flux<String> doChatWithModel(String message, String chatId, String userId, String modelName) {
         chatSessionService.validateSessionOwnership(chatId, userId);
         
         ChatModel selectedModel = modelRouterService.getByName(modelName);
@@ -517,15 +473,13 @@ public class ChatService {
                 )
                 .build();
 
-        ChatClientResponse chatClientResponse = routedClient
+        return   routedClient
                 .prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
-                .call()
-                .chatClientResponse();
-
-        return chatClientResponse.chatResponse().getResult().getOutput().getText();
+                .stream()
+                .content();
     }
 
     /**
@@ -535,24 +489,4 @@ public class ChatService {
         return modelRouterService.getRouteDecision(message);
     }
 
-    /**
-     * 获取可用模型列表
-     */
-    public java.util.Set<String> getAvailableModels() {
-        return chatModelProvider.getAvailableModels();
-    }
-
-    /**
-     * 获取用户当前的模型偏好
-     */
-    public String getUserModelPreference(String userId) {
-        return chatModelProvider.getUserPreference(userId);
-    }
-
-    /**
-     * 设置用户的模型偏好
-     */
-    public void setUserModelPreference(String userId, String modelName) {
-        chatModelProvider.setUserPreference(userId, modelName);
-    }
 }
