@@ -8,6 +8,7 @@ import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
 import com.dyx.crossrow.model.ChatSession;
 import com.dyx.crossrow.orchestrator.ExpertOrchestrator;
+import com.dyx.crossrow.service.ModelRouterService.RouteDecision;
 import com.dyx.crossrow.tool.ImageGenerationTool;
 import com.dyx.crossrow.tool.WebSearchTool;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -22,6 +23,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -66,12 +68,15 @@ public class ChatService {
     @jakarta.annotation.Resource
     private ChatSessionService chatSessionService;
 
+    @jakarta.annotation.Resource
+    private ModelRouterService modelRouterService;
+
     /**
      * initalize the app(memory based)
      *
      * @param chatModel Gemini chat model
      */
-    public ChatService(ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
+    public ChatService(@Qualifier("vertexAiGeminiChat") ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                        AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor) {
 
         // get template from resource
@@ -403,5 +408,144 @@ public class ChatService {
      */
     public String previewExpert(String message) {
         return expertOrchestrator.previewRoute(message);
+    }
+
+    /**
+     * 智能路由聊天：使用 AI 评审判断任务复杂度，自动选择模型
+     * - 简单任务：使用 Qwen（成本低）
+     * - 复杂任务/图片/代码等：使用 Gemini（能力强）
+     *
+     * @param message 用户消息
+     * @param chatId  会话ID
+     * @param userId  用户ID
+     * @return AI 响应
+     */
+    public String doChatWithAutoRoute(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
+        
+        RouteDecision decision = modelRouterService.getRouteDecision(message);
+        log.info("AI评审路由决策: 复杂度={}, 原因={}, 类别={}, 选择模型={}",
+                decision.review().isComplex() ? "复杂" : "简单",
+                decision.review().reason(),
+                decision.review().category(),
+                decision.selectedModel());
+
+        ChatModel selectedModel = modelRouterService.route(message);
+        
+        ChatClient routedClient = ChatClient.builder(selectedModel)
+                .defaultSystem(systemPromptTemplate.render())
+                .defaultAdvisors(
+                        simpleAuthAdvisor,
+                        new SimpleQuotaAdvisor(100),
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
+                        new MyLogAdvisor(100)
+                )
+                .build();
+
+        ChatClientResponse chatClientResponse = routedClient
+                .prompt()
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
+                .call()
+                .chatClientResponse();
+
+        String content = chatClientResponse.chatResponse().getResult().getOutput().getText();
+        log.info("路由聊天完成，使用模型: {}, 响应长度: {}", decision.selectedModel(), content.length());
+        return content;
+    }
+
+    /**
+     * 智能路由流式聊天：使用 AI 评审自动选择模型
+     *
+     * @param message 用户消息
+     * @param chatId  会话ID
+     * @param userId  用户ID
+     * @return 流式响应
+     */
+    public Flux<String> doChatStreamWithAutoRoute(String message, String chatId, String userId) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
+        
+        RouteDecision decision = modelRouterService.getRouteDecision(message);
+        log.info("流式AI评审路由: 复杂度={}, 选择模型={}", 
+                decision.review().isComplex() ? "复杂" : "简单", 
+                decision.selectedModel());
+
+        ChatModel selectedModel = modelRouterService.route(message);
+        
+        ChatClient routedClient = ChatClient.builder(selectedModel)
+                .defaultSystem(systemPromptTemplate.render())
+                .defaultAdvisors(
+                        simpleAuthAdvisor,
+                        new SimpleQuotaAdvisor(100),
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
+                        new MyLogAdvisor(100)
+                )
+                .build();
+
+        return routedClient
+                .prompt()
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
+                .stream()
+                .content();
+    }
+
+    /**
+     * 单独调用任务评审（用于调试或前端展示）
+     */
+    public ModelRouterService.TaskReview reviewTask(String message) {
+        return modelRouterService.reviewTask(message);
+    }
+
+    /**
+     * 使用指定模型聊天
+     *
+     * @param message   用户消息
+     * @param chatId    会话ID
+     * @param userId    用户ID
+     * @param modelName 模型名称 (gemini/qwen)
+     * @return AI 响应
+     */
+    public String doChatWithModel(String message, String chatId, String userId, String modelName) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
+        
+        ChatModel selectedModel = modelRouterService.getByName(modelName);
+        log.info("指定模型聊天: {}", modelName);
+
+        ChatClient routedClient = ChatClient.builder(selectedModel)
+                .defaultSystem(systemPromptTemplate.render())
+                .defaultAdvisors(
+                        simpleAuthAdvisor,
+                        new SimpleQuotaAdvisor(100),
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
+                        new MyLogAdvisor(100)
+                )
+                .build();
+
+        ChatClientResponse chatClientResponse = routedClient
+                .prompt()
+                .user(message)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
+                .call()
+                .chatClientResponse();
+
+        return chatClientResponse.chatResponse().getResult().getOutput().getText();
+    }
+
+    /**
+     * 获取模型路由信息
+     */
+    public RouteDecision previewRoute(String message) {
+        return modelRouterService.getRouteDecision(message);
+    }
+
+    /**
+     * 获取可用模型列表
+     */
+    public java.util.Set<String> getAvailableModels() {
+        return modelRouterService.getAvailableModels();
     }
 }
