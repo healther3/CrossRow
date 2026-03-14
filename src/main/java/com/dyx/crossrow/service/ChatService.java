@@ -39,10 +39,9 @@ import java.util.List;
 @Slf4j
 public class ChatService {
 
-    private final ChatClient chatClient;
-    private final ChatClient defaultChatClient;
     private final SystemPromptTemplate systemPromptTemplate;
     private final AgentFactory agentFactory;
+    private final ChatModelProvider chatModelProvider;
 
     @jakarta.annotation.Resource(name = "hybridRagAdvisor")
     private Advisor hybridRagAdvisor;
@@ -72,52 +71,48 @@ public class ChatService {
     private ModelRouterService modelRouterService;
 
     /**
-     * initalize the app(memory based)
-     *
-     * @param chatModel Gemini chat model
+     * Initialize the ChatService with ChatModelProvider for unified model management.
+     * Models are selected based on user preferences stored in the database.
      */
-    public ChatService(@Qualifier("vertexAiGeminiChat") ChatModel chatModel, @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
-                       AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor) {
+    public ChatService(@Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
+                       AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor,
+                       ChatModelProvider chatModelProvider) {
 
-        // get template from resource
         this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
-        // get factory
         this.agentFactory = agentFactory;
         this.chatMemory = chatMemory;
         this.simpleAuthAdvisor = simpleAuthAdvisor;
-//            基于文件保存 chat memory
-//            String fileDir = System.getProperty("user.dir")+"/tmp/chat-memory";
-//            ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
+        this.chatModelProvider = chatModelProvider;
+    }
 
-
-//        In memory chat memory 基于内存的chat memory
-//        ChatMemory chatMemory = MessageWindowChatMemory.builder()
-//                .chatMemoryRepository(new InMemoryChatMemoryRepository())
-//                .maxMessages(10)
-//                .build();
-
-        chatClient = ChatClient.builder(chatModel)
+    /**
+     * Build a ChatClient with user's preferred model and standard advisors.
+     */
+    private ChatClient buildChatClientForUser(String userId) {
+        ChatModel model = chatModelProvider.getModelForUser(userId);
+        return ChatClient.builder(model)
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
                         simpleAuthAdvisor,
                         new SimpleQuotaAdvisor(100),
-                        MessageChatMemoryAdvisor.builder(chatMemory)
-//                              .conversationId() 设置会话id
-                                .build(),
-                        // customized logger advisor
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         new MyLogAdvisor(100)
-                        // customized enhanced advisor
-                        // new ReReadingAdvisor()
                 )
                 .build();
+    }
 
-        defaultChatClient = ChatClient.builder(chatModel)
-                .build();
+    /**
+     * Build a simple ChatClient with user's preferred model (no advisors).
+     */
+    private ChatClient buildDefaultChatClientForUser(String userId) {
+        ChatModel model = chatModelProvider.getModelForUser(userId);
+        return ChatClient.builder(model).build();
     }
 
 
     /**
-     * chat with language model that has memory
+     * Chat with language model that has memory.
+     * Uses user's preferred model from ChatModelProvider.
      *
      * @param message user given message
      * @param chatId  chat conversation ID
@@ -125,6 +120,8 @@ public class ChatService {
      */
     public String doChat(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
+        ChatClient chatClient = buildChatClientForUser(userId);
+        
         ChatClientResponse chatClientResponse = chatClient
                 .prompt()
                 .user(message)
@@ -132,9 +129,7 @@ public class ChatService {
                         .param("userId", userId))
                 .call()
                 .chatClientResponse();
-        // get information from response
-        //log.info(chatClientResponse.context().);
-        // get content from response
+        
         ChatResponse chatResponse = chatClientResponse.chatResponse();
         String content = chatResponse.getResult().getOutput().getText();
         log.info("content: {}", content);
@@ -146,7 +141,8 @@ public class ChatService {
     }
 
     /**
-     * chat with LLM and generate a report
+     * Chat with LLM and generate a report.
+     * Uses user's preferred model from ChatModelProvider.
      *
      * @param message user given message
      * @param chatId  chat conversation ID
@@ -154,6 +150,8 @@ public class ChatService {
      */
     public PainReport doChatReport(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
+        ChatClient chatClient = buildChatClientForUser(userId);
+        
         PainReport painReport = chatClient
                 .prompt()
                 .system(systemPromptTemplate.render() + "***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
@@ -168,7 +166,8 @@ public class ChatService {
     }
 
     /**
-     * Chat with RAG (Retrieval Augmented Generation)
+     * Chat with RAG (Retrieval Augmented Generation).
+     * Uses user's preferred model from ChatModelProvider.
      *
      * @param message user given message
      * @param chatId  chat id
@@ -177,6 +176,8 @@ public class ChatService {
      */
     public String doChatWithRag(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
+        ChatClient chatClient = buildChatClientForUser(userId);
+        
         VertexAiGeminiChatOptions options = VertexAiGeminiChatOptions.builder()
                 .googleSearchRetrieval(false)
                 .build();
@@ -189,23 +190,6 @@ public class ChatService {
                         .param("userId", userId))
                 .advisors(hybridRagAdvisor)
                 .tools(imageGenerationTool)
-//                .advisors(QuestionAnswerAdvisor.builder(vectorStore)
-//                        .searchRequest(SearchRequest.builder()
-//                                .topK(2)
-//                                .similarityThreshold(0.5)
-//
-//                        .build())
-//                        .promptTemplate(new PromptTemplate("""
-//                下面是一些会帮助回答用户问题的信息
-//                ---------------------
-//                {question_answer_context}
-//                ---------------------
-//                结合这些可以帮助回答的上下文信息，给出用户问题分析和解决方案.
-//                *回答时请注明信息来源，例如:根据存在主义哲学观念，....*
-//                问题: {query}
-//                回答:
-//                """))
-
                 .call()
                 .chatClientResponse();
 
@@ -214,11 +198,16 @@ public class ChatService {
         return content;
     }
 
+    /**
+     * Chat with tools (search + image generation).
+     * Uses user's preferred model from ChatModelProvider.
+     */
     public String doChatWithTools(String message, String chatId, String userId, boolean allowImage, boolean allowSearch) {
+        ChatClient defaultChatClient = buildDefaultChatClientForUser(userId);
 
-        System.out.println("[链式调用] 开始处理: " + message);
+        log.info("[链式调用] 开始处理: {}", message);
 
-        System.out.println("正在调用搜索工具...");
+        log.info("正在调用搜索工具...");
         ChatClientResponse chatClientTextResponse = defaultChatClient
                 .prompt()
                 .system("""
@@ -235,7 +224,7 @@ public class ChatService {
                 .getOutput()
                 .getText();
 
-        System.out.println(" (Summary): " + summary);
+        log.info(" (Summary): {}", summary);
 
         if (summary == null || summary.isEmpty()) {
             summary = "（搜索未返回有效总结，尝试直接基于原问题生成）" + message;
@@ -257,14 +246,18 @@ public class ChatService {
                 .getResult()
                 .getOutput()
                 .getText();
-        System.out.println(" 结果 (ImageContent): " + imageContent);
+        log.info(" 结果 (ImageContent): {}", imageContent);
         String content = summary + imageContent;
         log.info("content: {}", content);
         return content;
-
     }
 
+    /**
+     * Chat with MCP tools.
+     * Uses user's preferred model from ChatModelProvider.
+     */
     public String doChatWithMCP(String message, String chatId, String userId) {
+        ChatClient defaultChatClient = buildDefaultChatClientForUser(userId);
 
         ChatClientResponse chatClientTextResponse = defaultChatClient
                 .prompt()
@@ -284,7 +277,6 @@ public class ChatService {
 
         log.info("content: {}", content);
         return content;
-
     }
 
     public  String doChatWithCrossRowAgent(String message, String chatId, String userId) {
@@ -317,8 +309,8 @@ public class ChatService {
     }
 
     /**
-     * chat with language model that has memory,
-     * streaming output
+     * Chat with language model that has memory, streaming output.
+     * Uses user's preferred model from ChatModelProvider.
      *
      * @param message user given message
      * @param chatId  chat conversation ID
@@ -326,14 +318,15 @@ public class ChatService {
      */
     public Flux<String> doChatStream(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
-        return  chatClient
+        ChatClient chatClient = buildChatClientForUser(userId);
+        
+        return chatClient
                 .prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
                 .stream()
                 .content();
-
     }
 
     public SseEmitter doChatWithCrossRowAgentStream(String message, String chatId, String userId) {
@@ -546,6 +539,20 @@ public class ChatService {
      * 获取可用模型列表
      */
     public java.util.Set<String> getAvailableModels() {
-        return modelRouterService.getAvailableModels();
+        return chatModelProvider.getAvailableModels();
+    }
+
+    /**
+     * 获取用户当前的模型偏好
+     */
+    public String getUserModelPreference(String userId) {
+        return chatModelProvider.getUserPreference(userId);
+    }
+
+    /**
+     * 设置用户的模型偏好
+     */
+    public void setUserModelPreference(String userId, String modelName) {
+        chatModelProvider.setUserPreference(userId, modelName);
     }
 }
