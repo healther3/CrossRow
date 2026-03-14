@@ -1,9 +1,12 @@
 package com.dyx.crossrow;
 
+import org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+        OpenAiEmbeddingAutoConfiguration.class  // 禁用 OpenAI Embedding，只用 Vertex AI 的
+})
 public class CrossRowApplication {
 
     public static void main(String[] args) {

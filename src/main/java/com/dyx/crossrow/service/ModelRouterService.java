@@ -55,28 +55,28 @@ public class ModelRouterService {
      * Constructor with dependency injection
      * 
      * Both models are auto-configured by Spring AI starters via application.yml:
-     * - Gemini: "vertexAiGeminiChat" bean from spring-ai-starter-model-vertex-ai-gemini
-     * - Qwen: "dashscopeChatModel" bean from spring-ai-alibaba-starter-dashscope
+     * - Gemini: "vertexAiGeminiChat" from spring-ai-starter-model-vertex-ai-gemini
+     * - Qwen: "openAiChatModel" from spring-ai-starter-model-openai (via DashScope OpenAI-compatible API)
      */
     public ModelRouterService(
             ModelRouterProperties properties,
             @Qualifier("vertexAiGeminiChat") ChatModel geminiChatModel,
-            @Autowired(required = false) @Qualifier("dashscopeChatModel") ChatModel dashscopeChatModel
+            @Autowired(required = false) @Qualifier("openAiChatModel") ChatModel qwenChatModel
     ) {
         this.properties = properties;
         this.defaultModel = geminiChatModel;
 
         models.put("gemini", geminiChatModel);
         
-        if (dashscopeChatModel != null) {
-            models.put("qwen", dashscopeChatModel);
-            log.info("Model router initialized: gemini (vertexAiGeminiChat), qwen (dashscopeChatModel)");
+        if (qwenChatModel != null) {
+            models.put("qwen", qwenChatModel);
+            log.info("Model router initialized: gemini (vertexAiGeminiChat), qwen (openAiChatModel via DashScope)");
             
-            this.reviewClient = ChatClient.builder(dashscopeChatModel)
+            this.reviewClient = ChatClient.builder(qwenChatModel)
                     .defaultSystem(REVIEW_PROMPT)
                     .build();
         } else {
-            log.warn("DashScope model not configured, using Gemini for review");
+            log.warn("Qwen/OpenAI model not configured, using Gemini for review");
             this.reviewClient = ChatClient.builder(geminiChatModel)
                     .defaultSystem(REVIEW_PROMPT)
                     .build();
