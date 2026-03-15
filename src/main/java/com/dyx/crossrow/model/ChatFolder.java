@@ -7,20 +7,26 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "chat_sessions", indexes = {
-        @Index(name = "idx_user_id", columnList = "user_id"),
-        @Index(name = "idx_updated_at", columnList = "updated_at")
+@Table(name = "chat_folders", indexes = {
+        @Index(name = "idx_folder_user_id", columnList = "user_id"),
+        @Index(name = "idx_folder_order", columnList = "sort_order")
 })
-public class ChatSession {
+public class ChatFolder {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;  // chatId
+    private String id;
 
     @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Column(length = 200)
-    private String title;
+    @Column(length = 100, nullable = false)
+    private String name;
+
+    @Column(name = "sort_order")
+    private Integer sortOrder;  // 文件夹排序
+
+    @Column(name = "is_default", nullable = false)
+    private Boolean isDefault = false;  // 是否为默认文件夹
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -28,13 +34,11 @@ public class ChatSession {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "folder_id")
-    private String folderId;
-
     @PrePersist
     public void prePersist() {
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
+        if (sortOrder == null) sortOrder = 0;
     }
 
     @PreUpdate
