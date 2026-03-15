@@ -13,16 +13,13 @@ import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.ImageConfig;
 import com.google.genai.types.Part;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 public class ImageGenerationService {
@@ -30,6 +27,9 @@ public class ImageGenerationService {
     private final Client genAiClient;
     private final ImageModelProperties imageModelProperties;
     private final CityRepository cityRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+    public static final int MAX_RETRIES = 3;
+
    @Value("${google.maps.api-key}")
     private String apiKey;
    @Value("${google.cloud.storage.bucket-name}")
@@ -137,17 +137,7 @@ public class ImageGenerationService {
         }
 // 1. 随机选一个城市
         CityCoordinates city = cityList.get(random.nextInt(cityList.size()));
-
-        // 2. 添加随机偏移 (Jitter)
-        // 0.01 度大约是 1.11 公里。
-        // 我们在 +/- 0.03 度 (约3km) 范围内随机，这样既保证在城市里，又保证每次景色不同
-        double latOffset = (random.nextDouble() * 0.01) - 0.03;
-        double lngOffset = (random.nextDouble() * 0.01) - 0.03;
-
-        double finalLat = city.getLat() + latOffset;
-        double finalLng = city.getLng() + lngOffset;
-
-        return String.format("%.6f,%.6f", finalLat, finalLng);
+        return getValidStreetViewLocation(city, 0.03);
     }
 
     private String buildGoogleUrl(String location) {
@@ -156,7 +146,7 @@ public class ImageGenerationService {
             return "/api/images/default_BG.jpg";
         }
         return String.format(
-                "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=%s&fov=120&heading=%d&pitch=10&radius=1000&source=outdoor&key=%s",
+                "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=%s&fov=90&heading=%d&pitch=0&radius=1000&source=outdoor&key=%s",
                 location,
                 new Random().nextInt(360),
                 apiKey
@@ -181,15 +171,44 @@ public class ImageGenerationService {
 
         CityCoordinates city = filteredList.get(random.nextInt(filteredList.size()));
 
-        // return http file
-        double latOffset = (random.nextDouble() * 0.002) - 0.001;
-        double lngOffset = (random.nextDouble() * 0.002) - 0.001;
-
-        double finalLat = city.getLat() + latOffset;
-        double finalLng = city.getLng() + lngOffset;
-
-        return String.format("%.6f,%.6f", finalLat, finalLng);
+       return getValidStreetViewLocation(city, 0.002);
     }
 
+    /**
+     * 核心校验逻辑：带有重试机制的坐标生成
+     * @param targetCity 目标城市
+     * @param jitterRange 偏移范围 (例如 0.03 代表约 3km)
+     */
+    private String getValidStreetViewLocation(CityCoordinates targetCity, double jitterRange) {
 
+        for (int i = 0; i < MAX_RETRIES; i++) {
+            // 修复数学 Bug：确保偏移量在 [-jitterRange, +jitterRange] 之间均匀分布
+            double latOffset = (random.nextDouble() * 2 * jitterRange) - jitterRange;
+            double lngOffset = (random.nextDouble() * 2 * jitterRange) - jitterRange;
+
+            double finalLat = targetCity.getLat() + latOffset;
+            double finalLng = targetCity.getLng() + lngOffset;
+            String loc = String.format("%.6f,%.6f", finalLat, finalLng);
+
+            // 构建 Metadata API URL，参数必须与 buildGoogleUrl 完全一致 (radius=1000, source=outdoor)
+            String metaUrl = String.format(
+                    "https://maps.googleapis.com/maps/api/streetview/metadata?location=%s&radius=1000&source=outdoor&key=%s",
+                    loc, apiKey
+            );
+
+            try {
+                // 发送 GET 请求检查是否有街景
+                String response = restTemplate.getForObject(metaUrl, String.class);
+                if (response != null && response.contains("\"status\" : \"OK\"")) {
+                    System.out.println("[Debug] 找到有效街景，重试次数: " + i);
+                    return loc; // 校验成功，返回有效坐标
+                }
+            } catch (Exception e) {
+                System.err.println("[Debug] Metadata 校验请求失败: " + e.getMessage());
+            }
+        }
+
+        System.out.println("[Debug] 达到最大重试次数，降级为默认背景");
+        return "default_location"; // 如果试了5次还是海里/深山，返回默认背景
+    }
 }
