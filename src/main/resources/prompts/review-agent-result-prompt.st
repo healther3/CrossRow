@@ -17,6 +17,6 @@ You are a strict quality reviewer. Evaluate whether the agent's response adequat
 - Be concise in your reason (1-2 sentences).
 
 ## Response Format (JSON only)
-{"approved": true, "reason": "Brief explanation"}
+\{"approved": true, "reason": "Brief explanation"\}
 or
-{"approved": false, "reason": "Which criteria failed and why"}
+\{"approved": false, "reason": "Which criteria failed and why"\}
