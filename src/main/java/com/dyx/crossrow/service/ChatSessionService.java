@@ -35,11 +35,16 @@ public class ChatSessionService {
     /**
      * 创建新会话
      */
-    public ChatSession createSession(String userId, String title) {
+    public ChatSession createSession(String userId, String title, String folderId) {
         ChatSession session = new ChatSession();
         session.setUserId(userId);
         session.setTitle(title != null ? title : "new session");
+        session.setFolderId(folderId);
         return sessionRepository.save(session);
+    }
+
+    public ChatSession createSession(String userId, String title) {
+        return createSession(userId, title, null);
     }
 
     /**

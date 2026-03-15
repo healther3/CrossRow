@@ -32,9 +32,11 @@ public class ChatSessionController {
     }
 
     @PostMapping
-    public ChatSession createSession(@RequestParam(required = false) String title) {
+    public ChatSession createSession(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String folderId) {
         String userId = UserContext.getUserId();
-        return sessionService.createSession(userId, title);
+        return sessionService.createSession(userId, title, folderId);
     }
 
     @PutMapping("/{chatId}/title")
