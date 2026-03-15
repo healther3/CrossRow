@@ -26,13 +26,15 @@ import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
-
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 @Service
@@ -120,6 +122,7 @@ public class ChatService {
      */
     public String doChat(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
+        chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message);
         ChatClient chatClient = buildChatClientForUser(userId);
         
         ChatClientResponse chatClientResponse = chatClient
@@ -281,6 +284,7 @@ public class ChatService {
 
     public  String doChatWithCrossRowAgent(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
+        chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message);
         log.info("开始 Agent 对话流 - User: {}, Session: {}", userId, chatId);
 
         //  通过工厂创建一个干净的、绑定了当前用户的 Agent
@@ -311,22 +315,40 @@ public class ChatService {
     /**
      * Chat with language model that has memory, streaming output.
      * Uses user's preferred model from ChatModelProvider.
+     * Returns ServerSentEvent to support custom event names (e.g., session_title).
      *
      * @param message user given message
      * @param chatId  chat conversation ID
-     * @return information in chat
+     * @return SSE stream with content events and optional session_title event
      */
-    public Flux<String> doChatStream(String message, String chatId, String userId) {
+    public Flux<ServerSentEvent<String>> doChatStream(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
         ChatClient chatClient = buildChatClientForUser(userId);
         
-        return chatClient
+        // 聊天内容流，每个 chunk 作为 message 事件
+        Flux<ServerSentEvent<String>> contentStream = chatClient
                 .prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
                 .stream()
-                .content();
+                .content()
+                .map(content -> ServerSentEvent.<String>builder()
+                        .event("message")
+                        .data(content)
+                        .build());
+        
+        // 异步生成标题，完成后发送 session_title 事件
+        Flux<ServerSentEvent<String>> titleStream = chatSessionService
+                .generateTitleIfNeededAsync(chatId, userId, message)
+                .map(title -> ServerSentEvent.<String>builder()
+                        .event("session_title")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .build())
+                .flux();
+        
+        // 合并两个流：内容流和标题流并行执行
+        return Flux.merge(contentStream, titleStream);
     }
 
     public SseEmitter doChatWithCrossRowAgentStream(String message, String chatId, String userId) {
@@ -355,6 +377,9 @@ public class ChatService {
             chatMemory.clear(chatId);
             chatMemory.add(chatId, updatedMemory);
             log.info("Agent 完成，已保存 {} 条消息到内存", updatedMemory.size());
+        }, emitter -> {
+            // emitter 创建后立即触发异步标题生成，生成完成后会通过 SSE 通知前端
+            chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message, emitter);
         });
 
         return response;
@@ -391,6 +416,9 @@ public class ChatService {
             chatMemory.clear(chatId);
             chatMemory.add(chatId, updatedMemory);
             log.info("{} 专家完成，已保存 {} 条消息到内存", domain, updatedMemory.size());
+        }, emitter -> {
+            // emitter 创建后立即触发异步标题生成，生成完成后会通过 SSE 通知前端
+            chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message, emitter);
         });
 
         return response;
@@ -406,13 +434,14 @@ public class ChatService {
 
     /**
      * 智能路由流式聊天：使用 AI 评审自动选择模型
+     * Returns ServerSentEvent to support custom event names (e.g., session_title).
      *
      * @param message 用户消息
      * @param chatId  会话ID
      * @param userId  用户ID
-     * @return 流式响应
+     * @return SSE stream with content events and optional session_title event
      */
-    public Flux<String> doChatStreamWithAutoRoute(String message, String chatId, String userId) {
+    public Flux<ServerSentEvent<String>> doChatStreamWithAutoRoute(String message, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
         
         RouteDecision decision = modelRouterService.getRouteDecision(message);
@@ -432,13 +461,29 @@ public class ChatService {
                 )
                 .build();
 
-        return routedClient
+        // 聊天内容流
+        Flux<ServerSentEvent<String>> contentStream = routedClient
                 .prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
                 .stream()
-                .content();
+                .content()
+                .map(content -> ServerSentEvent.<String>builder()
+                        .event("message")
+                        .data(content)
+                        .build());
+        
+        // 异步生成标题流
+        Flux<ServerSentEvent<String>> titleStream = chatSessionService
+                .generateTitleIfNeededAsync(chatId, userId, message)
+                .map(title -> ServerSentEvent.<String>builder()
+                        .event("session_title")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .build())
+                .flux();
+        
+        return Flux.merge(contentStream, titleStream);
     }
 
     /**
@@ -450,14 +495,15 @@ public class ChatService {
 
     /**
      * 使用指定模型聊天
+     * Returns ServerSentEvent to support custom event names (e.g., session_title).
      *
      * @param message   用户消息
      * @param chatId    会话ID
      * @param userId    用户ID
      * @param modelName 模型名称 (gemini/qwen)
-     * @return AI 响应
+     * @return SSE stream with content events and optional session_title event
      */
-    public Flux<String> doChatWithModel(String message, String chatId, String userId, String modelName) {
+    public Flux<ServerSentEvent<String>> doChatWithModel(String message, String chatId, String userId, String modelName) {
         chatSessionService.validateSessionOwnership(chatId, userId);
         
         ChatModel selectedModel = modelRouterService.getByName(modelName);
@@ -473,13 +519,29 @@ public class ChatService {
                 )
                 .build();
 
-        return   routedClient
+        // 聊天内容流
+        Flux<ServerSentEvent<String>> contentStream = routedClient
                 .prompt()
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
                 .stream()
-                .content();
+                .content()
+                .map(content -> ServerSentEvent.<String>builder()
+                        .event("message")
+                        .data(content)
+                        .build());
+        
+        // 异步生成标题流
+        Flux<ServerSentEvent<String>> titleStream = chatSessionService
+                .generateTitleIfNeededAsync(chatId, userId, message)
+                .map(title -> ServerSentEvent.<String>builder()
+                        .event("session_title")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .build())
+                .flux();
+        
+        return Flux.merge(contentStream, titleStream);
     }
 
     /**

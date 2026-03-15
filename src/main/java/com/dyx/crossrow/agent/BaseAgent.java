@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /**
  * BaseAgent class, implement agent loop:
@@ -129,7 +130,23 @@ public abstract class BaseAgent {
      * @return execution result in streaming form
      */
     public SseEmitter runStream(String userPrompt, Runnable onComplete) {
+        return runStream(userPrompt, onComplete, null);
+    }
+
+    /**
+     * @param userPrompt user input
+     * @param onComplete callback to execute when agent finishes (for saving memory, etc.)
+     * @param onEmitterReady callback to execute when emitter is created (for sending early events like title updates)
+     * @return execution result in streaming form
+     */
+    public SseEmitter runStream(String userPrompt, Runnable onComplete, Consumer<SseEmitter> onEmitterReady) {
         SseEmitter emitter = new SseEmitter(330000L);
+        
+        // 通知调用者 emitter 已准备好，可以用于发送额外事件（如标题更新）
+        if (onEmitterReady != null) {
+            onEmitterReady.accept(emitter);
+        }
+        
         final String capturedUserId = this.userId;
         final ObjectMapper objectMapper = new ObjectMapper();
         

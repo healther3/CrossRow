@@ -4,6 +4,7 @@ import com.dyx.crossrow.service.ChatService;
 import com.dyx.crossrow.service.ModelRouterService;
 import jakarta.annotation.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
@@ -29,16 +30,20 @@ public class ChatController {
     }
 
     /**
+     * Streaming chat with SSE events.
+     * Returns two event types:
+     * - event: message (chat content chunks)
+     * - event: session_title (auto-generated title for new sessions)
      *
      * @param message user prompt
      * @param chatId conversation id
      * @param userId user id
-     * @return LLM text in streaming form
+     * @return SSE stream with message and session_title events
      */
     @GetMapping(value = "/crossrow/chat/simple/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> simpleChatAsync(@RequestParam("message") String message,
-                                        @RequestParam("chatId") String chatId,
-                                        @RequestParam ("userId") String userId) {
+    public Flux<ServerSentEvent<String>> simpleChatAsync(@RequestParam("message") String message,
+                                                         @RequestParam("chatId") String chatId,
+                                                         @RequestParam ("userId") String userId) {
         return chatService.doChatStream(message, chatId, userId);
     }
 
@@ -84,23 +89,31 @@ public class ChatController {
      * 智能路由流式聊天：AI 自动评审任务复杂度并选择模型
      * - 简单任务 → Qwen（成本低）
      * - 复杂任务 → Gemini（能力强）
+     * 
+     * Returns two event types:
+     * - event: message (chat content chunks)
+     * - event: session_title (auto-generated title for new sessions)
      */
     @GetMapping(value = "/crossrow/chat/auto-route/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatWithAutoRoute(@RequestParam("message") String message,
-                                          @RequestParam("chatId") String chatId,
-                                          @RequestParam("userId") String userId) {
+    public Flux<ServerSentEvent<String>> chatWithAutoRoute(@RequestParam("message") String message,
+                                                           @RequestParam("chatId") String chatId,
+                                                           @RequestParam("userId") String userId) {
         return chatService.doChatStreamWithAutoRoute(message, chatId, userId);
     }
 
     /**
      * 使用指定模型流式聊天
      * @param modelName 模型名称: gemini / qwen
+     * 
+     * Returns two event types:
+     * - event: message (chat content chunks)
+     * - event: session_title (auto-generated title for new sessions)
      */
     @GetMapping(value = "/crossrow/chat/model/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatWithModel(@RequestParam("message") String message,
-                                      @RequestParam("chatId") String chatId,
-                                      @RequestParam("userId") String userId,
-                                      @RequestParam("model") String modelName) {
+    public Flux<ServerSentEvent<String>> chatWithModel(@RequestParam("message") String message,
+                                                       @RequestParam("chatId") String chatId,
+                                                       @RequestParam("userId") String userId,
+                                                       @RequestParam("model") String modelName) {
         return chatService.doChatWithModel(message, chatId, userId, modelName);
     }
 
