@@ -14,6 +14,10 @@ public enum AgentState {
      */
     FINISHED,
     /**
+     * 等待用户输入（askHuman 调用后）
+     */
+    WAITING_FOR_INPUT,
+    /**
      * 错误
      */
     ERROR

@@ -50,8 +50,8 @@ public abstract class BaseAgent {
      * @return execution result
      */
     public String run(String userPrompt) {
-        //check exceptions
-        if (this.state != AgentState.IDLE) {
+        //check exceptions - 允许从 IDLE 或 WAITING_FOR_INPUT 状态启动
+        if (this.state != AgentState.IDLE && this.state != AgentState.WAITING_FOR_INPUT) {
             throw new AgentStateException(this.state);
         }
         if (StrUtil.isEmpty(userPrompt)) {
@@ -64,8 +64,8 @@ public abstract class BaseAgent {
 
         try {
             List<String> results = new ArrayList<>();
-            //execute
-            for (int i = 0; i < maxStep && this.state != AgentState.FINISHED; i++) {
+            //execute - 在 FINISHED 或 WAITING_FOR_INPUT 时停止循环
+            for (int i = 0; i < maxStep && this.state == AgentState.RUNNING; i++) {
                 currentStep = i + 1;
                 log.info("Step: {}/{}", currentStep, maxStep);
                 String stepResult = step();
@@ -73,7 +73,9 @@ public abstract class BaseAgent {
             }
 
             //CHECK STATUS
-            if (currentStep >= maxStep) {
+            if (this.state == AgentState.WAITING_FOR_INPUT) {
+                log.info("Agent waiting for user input");
+            } else if (currentStep >= maxStep) {
                 this.state = AgentState.FINISHED;
                 results.add("Finished: reached max steps");
                 log.info("Agent Finished");
@@ -99,9 +101,17 @@ public abstract class BaseAgent {
 
     /**
      * clean resources
+     * 注意：WAITING_FOR_INPUT 状态时保留 messageList，以便用户回复后继续对话
      */
     protected void clean() {
         log.debug("Cleaning agent [{}] resources, previous state: {}", this.name, this.state);
+
+        // WAITING_FOR_INPUT 状态时保留对话历史，只重置步数
+        if (this.state == AgentState.WAITING_FOR_INPUT) {
+            this.currentStep = 0;
+            log.debug("Agent [{}] in WAITING_FOR_INPUT state, preserving message history", this.name);
+            return;
+        }
 
         this.state = AgentState.IDLE;
         this.currentStep = 0;
@@ -127,8 +137,8 @@ public abstract class BaseAgent {
                 {
                     try {
                         UserContext.setUserId(capturedUserId);
-                        //check exceptions
-                        if (this.state != AgentState.IDLE) {
+                        //check exceptions - 允许从 IDLE 或 WAITING_FOR_INPUT 状态启动
+                        if (this.state != AgentState.IDLE && this.state != AgentState.WAITING_FOR_INPUT) {
                             StepResultDTO errorResult = StepResultDTO.builder()
                                     .stepType("error")
                                     .error("CAN'T RUN PROXY IN STATE " + this.state)
@@ -158,9 +168,9 @@ public abstract class BaseAgent {
                         emitter.completeWithError(e);
                         return;
                     }
-                    //  execute
+                    //  execute - 在 FINISHED 或 WAITING_FOR_INPUT 时停止循环
                     try {
-                        for (int i = 0; i < maxStep && this.state != AgentState.FINISHED; i++) {
+                        for (int i = 0; i < maxStep && this.state == AgentState.RUNNING; i++) {
                             currentStep = i + 1;
                             log.info("Step: {}/{}", currentStep, maxStep);
                             
@@ -197,7 +207,17 @@ public abstract class BaseAgent {
                         }
 
                         //CHECK STATUS
-                        if (currentStep >= maxStep) {
+                        if (this.state == AgentState.WAITING_FOR_INPUT) {
+                            // askHuman 被调用，发送等待用户输入的事件
+                            StepResultDTO waitingResult = StepResultDTO.builder()
+                                    .stepType("waiting_for_input")
+                                    .stepNumber(currentStep)
+                                    .build();
+                            emitter.send(SseEmitter.event()
+                                    .name("waiting")
+                                    .data(objectMapper.writeValueAsString(waitingResult), MediaType.APPLICATION_JSON));
+                            log.info("Agent waiting for user input");
+                        } else if (currentStep >= maxStep) {
                             this.state = AgentState.FINISHED;
                             StepResultDTO completeResult = StepResultDTO.builder()
                                     .stepType("complete")

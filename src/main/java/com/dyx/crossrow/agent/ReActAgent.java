@@ -3,6 +3,7 @@ package com.dyx.crossrow.agent;
 import com.dyx.crossrow.exceptions.ReActProcessingException;
 import com.dyx.crossrow.model.dto.StepResultDTO;
 import com.dyx.crossrow.utils.TokenCostCalculator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.metadata.Usage;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.List;
 /**
  * loop: Reasoning and Acting
  */
+@Slf4j
 public abstract class ReActAgent extends BaseAgent{
     /**
      * execute current state and decide next step
@@ -81,6 +83,14 @@ public abstract class ReActAgent extends BaseAgent{
             boolean shouldAct = thinking();
             String thinkingContent = getThinkingResult();
             
+            // 调试日志：确认 thinkingContent 的值
+            log.info("=== stepWithCallback Debug ===");
+            log.info("shouldAct: {}", shouldAct);
+            log.info("thinkingContent: '{}'", thinkingContent);
+            log.info("thinkingContent is null: {}", thinkingContent == null);
+            log.info("thinkingContent length: {}", thinkingContent != null ? thinkingContent.length() : -1);
+            log.info("==============================");
+            
             // 获取 token 使用信息
             StepResultDTO.TokenUsage tokenUsage = TokenCostCalculator.calculateTokenUsage(getCurrentUsage(), "gemini");
             
@@ -109,6 +119,7 @@ public abstract class ReActAgent extends BaseAgent{
             List<StepResultDTO.ToolCallInfo> toolCallInfos = getPendingToolCallInfos();
             
             // 发送 pending 状态
+            log.info("Before pending: thinkingContent = '{}'", thinkingContent);
             if (onEvent != null && toolCallInfos != null && !toolCallInfos.isEmpty()) {
                 StepResultDTO pendingResult = StepResultDTO.builder()
                         .stepType("tool_call")
@@ -117,13 +128,18 @@ public abstract class ReActAgent extends BaseAgent{
                         .toolCalls(toolCallInfos)
                         .tokenUsage(tokenUsage)
                         .build();
+                log.info("Pending result thinking: '{}'", pendingResult.getThinking());
                 onEvent.onStepEvent(pendingResult);
             }
+            
+            log.info("After pending, before act: thinkingContent = '{}'", thinkingContent);
             
             // acting phase - 执行工具调用
             long toolStartTime = System.currentTimeMillis();
             String actResult = act();
             long toolElapsed = System.currentTimeMillis() - toolStartTime;
+            
+            log.info("After act: thinkingContent = '{}'", thinkingContent);
             
             // 更新工具调用结果
             if (toolCallInfos != null && !toolCallInfos.isEmpty()) {
@@ -132,7 +148,11 @@ public abstract class ReActAgent extends BaseAgent{
             
             long totalElapsed = System.currentTimeMillis() - startTime;
             
-            return StepResultDTO.builder()
+            // 调试：确认返回给前端的 thinking 值
+            log.info("=== Building final tool_call result ===");
+            log.info("thinkingContent before build: '{}'", thinkingContent);
+            
+            StepResultDTO result = StepResultDTO.builder()
                     .stepType("tool_call")
                     .stepNumber(stepNumber)
                     .thinking(thinkingContent)
@@ -140,6 +160,11 @@ public abstract class ReActAgent extends BaseAgent{
                     .tokenUsage(tokenUsage)
                     .elapsedMs(totalElapsed)
                     .build();
+            
+            log.info("result.getThinking(): '{}'", result.getThinking());
+            log.info("========================================");
+            
+            return result;
                     
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;

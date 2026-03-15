@@ -143,9 +143,31 @@ public class ToolCallAgent extends ReActAgent{
             pendingToolCalls = assistantMessage.getToolCalls();
 
             //load text result content
-            String content = response.getResult().getOutput().getText();
+            AssistantMessage output = response.getResult().getOutput();
+            String content = output.getText();
             if (content == null) content = "";
+            
+            // 调试日志：查看完整的 LLM 输出
+            log.info("=== LLM Output Debug ===");
+            log.info("Full output object: {}", output);
+            log.info("Text content: '{}'", content);
+            log.info("Text content length: {}", content.length());
+            log.info("Tool calls count: {}", output.getToolCalls() != null ? output.getToolCalls().size() : 0);
+            log.info("Metadata: {}", output.getMetadata());
+            log.info("========================");
+            
             // 保存思考结果，供 step() 返回给前端
+            // 如果 LLM 没有返回文本但有工具调用，生成一个描述性的思考内容
+            if ((content == null || content.isEmpty()) && pendingToolCalls != null && !pendingToolCalls.isEmpty()) {
+                StringBuilder thinkingBuilder = new StringBuilder("Deciding to use tool: ");
+                for (int i = 0; i < pendingToolCalls.size(); i++) {
+                    AssistantMessage.ToolCall tc = pendingToolCalls.get(i);
+                    if (i > 0) thinkingBuilder.append(", ");
+                    thinkingBuilder.append(tc.name());
+                }
+                content = thinkingBuilder.toString();
+                log.info("Generated thinking from tool calls: {}", content);
+            }
             this.currentThinkingResult = content;
             log.info("{}'s thoughts: {}", getName(), content);
 
@@ -214,10 +236,17 @@ public class ToolCallAgent extends ReActAgent{
             setMessageList(toolExecutionResult.conversationHistory());
             ToolResponseMessage toolResponseMessage = (ToolResponseMessage) toolExecutionResult.conversationHistory().getLast();
 
-            // check if agent should terminate
-            boolean shouldTerminate = toolResponseMessage.getResponses().stream()
-                    .anyMatch(response -> specialToolNames.contains(response.name().toLowerCase()));
-            if(shouldTerminate) {
+            // check if agent should terminate or wait for user input
+            boolean calledAskHuman = toolResponseMessage.getResponses().stream()
+                    .anyMatch(response -> "askhuman".equalsIgnoreCase(response.name()));
+            boolean calledTerminate = toolResponseMessage.getResponses().stream()
+                    .anyMatch(response -> "terminate".equalsIgnoreCase(response.name()));
+            
+            if (calledAskHuman) {
+                // askHuman: 暂停循环，等待用户输入
+                setState(AgentState.WAITING_FOR_INPUT);
+            } else if (calledTerminate) {
+                // terminate: 任务完成，结束循环
                 setState(AgentState.FINISHED);
             }
             // return the collected tool calling result
