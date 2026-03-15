@@ -3,11 +3,13 @@ package com.dyx.crossrow.factory;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
+import com.dyx.crossrow.agent.ReviewAgent;
 import com.dyx.crossrow.service.ChatModelProvider;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -24,6 +26,9 @@ public class AgentFactory {
     private final ToolCallStrategy toolCallStrategy;
     private final SimpleAuthAdvisor simpleAuthAdvisor;
     private final ChatModelProvider chatModelProvider;
+    
+    @Autowired(required = false)
+    private ReviewAgent reviewAgent;
 
     // Domain-specific tools
     private final ToolCallback[] philosophyTools;
@@ -110,6 +115,12 @@ public class AgentFactory {
 
         agent.setUserId(userId);
         agent.setSessionId(sessionId);
+        
+        // 手动注入 ReviewAgent（因为 ExpertAgent 不是 Spring Bean）
+        if (reviewAgent != null) {
+            agent.setReviewAgent(reviewAgent);
+        }
+        
         return agent;
     }
 }
