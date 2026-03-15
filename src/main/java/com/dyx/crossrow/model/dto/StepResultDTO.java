@@ -50,6 +50,16 @@ public class StepResultDTO {
     private String error;
     
     /**
+     * Review 是否通过
+     */
+    private Boolean reviewApproved;
+    
+    /**
+     * Review 原因/反馈
+     */
+    private String reviewReason;
+    
+    /**
      * Token 使用统计
      */
     private TokenUsage tokenUsage;

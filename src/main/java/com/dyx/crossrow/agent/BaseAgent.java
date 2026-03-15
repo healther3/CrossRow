@@ -2,6 +2,7 @@ package com.dyx.crossrow.agent;
 
 import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.model.AgentState;
+import com.dyx.crossrow.model.ReviewResult;
 import com.dyx.crossrow.model.dto.StepResultDTO;
 import com.dyx.crossrow.exceptions.AgentStateException;
 import com.dyx.crossrow.exceptions.EmptyUserPromptException;
@@ -12,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.springframework.http.MediaType;
@@ -45,6 +48,13 @@ public abstract class BaseAgent {
     private ChatClient chatClient;
     //memory
     private List<Message> messageList = new ArrayList<>();
+    //Review
+    @Autowired(required = false)  // 可选注入
+    private ReviewAgent reviewAgent;
+    @Value("${agent.review.enabled:false}")
+    private boolean reviewEnabled;
+    @Value("${agent.review.max-retries:2}")
+    private int maxReviewRetries;
 
     /**
      * @param userPrompt user input
@@ -101,6 +111,22 @@ public abstract class BaseAgent {
     public abstract String step();
 
     /**
+     * 从 StepResultDTO 中提取最终输出内容
+     */
+    private String extractFinalOutput(StepResultDTO stepResult) {
+        if (stepResult == null) {
+            return "";
+        }
+        if (stepResult.getFinalAnswer() != null && !stepResult.getFinalAnswer().isEmpty()) {
+            return stepResult.getFinalAnswer();
+        }
+        if (stepResult.getThinking() != null && !stepResult.getThinking().isEmpty()) {
+            return stepResult.getThinking();
+        }
+        return "";
+    }
+
+    /**
      * clean resources
      * 注意：WAITING_FOR_INPUT 状态时保留 messageList，以便用户回复后继续对话
      */
@@ -152,6 +178,7 @@ public abstract class BaseAgent {
         
         CompletableFuture.runAsync(() ->
                 {
+                    String lastFinalAnswer = null;
                     try {
                         UserContext.setUserId(capturedUserId);
                         //check exceptions - 允许从 IDLE 或 WAITING_FOR_INPUT 状态启动
@@ -187,6 +214,8 @@ public abstract class BaseAgent {
                     }
                     //  execute - 在 FINISHED 或 WAITING_FOR_INPUT 时停止循环
                     try {
+                        StepResultDTO lastStepResult = null;
+                        
                         for (int i = 0; i < maxStep && this.state == AgentState.RUNNING; i++) {
                             currentStep = i + 1;
                             log.info("Step: {}/{}", currentStep, maxStep);
@@ -216,6 +245,8 @@ public abstract class BaseAgent {
                                         .build();
                             }
                             
+                            lastStepResult = stepResult;
+                            
                             // 发送最终结果
                             emitter.send(SseEmitter.event()
                                     .id(String.valueOf(currentStep))
@@ -240,6 +271,101 @@ public abstract class BaseAgent {
                                     .stepType("complete")
                                     .stepNumber(currentStep)
                                     .finalAnswer("Terminated: Reached maximum step: " + maxStep)
+                                    .build();
+                            emitter.send(SseEmitter.event()
+                                    .name("complete")
+                                    .data(objectMapper.writeValueAsString(completeResult), MediaType.APPLICATION_JSON));
+                            log.info("Agent Finished");
+                        } else if (this.state == AgentState.FINISHED) {
+                            // Agent 正常完成，进行 Review（如果启用）
+                            if (reviewEnabled && reviewAgent != null) {
+                                String finalOutput = extractFinalOutput(lastStepResult);
+                                
+                                for (int retry = 0; retry < maxReviewRetries; retry++) {
+                                    // 发送 review 开始事件
+                                    emitter.send(SseEmitter.event()
+                                            .name("review")
+                                            .data(objectMapper.writeValueAsString(
+                                                    StepResultDTO.builder()
+                                                            .stepType("review_pending")
+                                                            .stepNumber(retry + 1)
+                                                            .build()
+                                            ), MediaType.APPLICATION_JSON));
+                                    
+                                    ReviewResult review = reviewAgent.review(userPrompt, finalOutput);
+                                    
+                                    // 发送 review 结果事件
+                                    emitter.send(SseEmitter.event()
+                                            .name("review")
+                                            .data(objectMapper.writeValueAsString(
+                                                    StepResultDTO.builder()
+                                                            .stepType("review_result")
+                                                            .stepNumber(retry + 1)
+                                                            .reviewApproved(review.isApproved())
+                                                            .reviewReason(review.getReason())
+                                                            .build()
+                                            ), MediaType.APPLICATION_JSON));
+                                    
+                                    if (review.isApproved()) {
+                                        log.info("Review approved: {}", review.getReason());
+                                        break;
+                                    }
+                                    
+                                    log.info("Review rejected (attempt {}): {}", retry + 1, review.getReason());
+                                    
+                                    // 最后一次重试失败，不再继续
+                                    if (retry >= maxReviewRetries - 1) {
+                                        break;
+                                    }
+                                    
+                                    // 拒绝：注入反馈，继续执行
+                                    String feedback = "Review feedback: " + review.getReason() + ". Please address this issue.";
+                                    messageList.add(new UserMessage(feedback));
+                                    
+                                    // 继续执行几步
+                                    this.state = AgentState.RUNNING;
+                                    for (int j = 0; j < 3 && this.state == AgentState.RUNNING; j++) {
+                                        currentStep++;
+                                        log.info("Retry Step: {}/{}", currentStep, maxStep);
+                                        
+                                        StepResultDTO retryStepResult;
+                                        if (this instanceof ReActAgent) {
+                                            ReActAgent reactAgent = (ReActAgent) this;
+                                            retryStepResult = reactAgent.stepWithCallback(currentStep, (pendingEvent) -> {
+                                                try {
+                                                    emitter.send(SseEmitter.event()
+                                                            .id(currentStep + "-pending")
+                                                            .name("step")
+                                                            .data(objectMapper.writeValueAsString(pendingEvent), MediaType.APPLICATION_JSON));
+                                                } catch (Exception e) {
+                                                    log.error("Failed to send pending event: {}", e.getMessage());
+                                                }
+                                            });
+                                        } else {
+                                            String result = step();
+                                            retryStepResult = StepResultDTO.builder()
+                                                    .stepType("thinking")
+                                                    .stepNumber(currentStep)
+                                                    .thinking(result)
+                                                    .build();
+                                        }
+                                        
+                                        lastStepResult = retryStepResult;
+                                        finalOutput = extractFinalOutput(retryStepResult);
+                                        
+                                        emitter.send(SseEmitter.event()
+                                                .id(String.valueOf(currentStep))
+                                                .name("step")
+                                                .data(objectMapper.writeValueAsString(retryStepResult), MediaType.APPLICATION_JSON));
+                                    }
+                                }
+                            }
+                            
+                            // 发送完成事件
+                            StepResultDTO completeResult = StepResultDTO.builder()
+                                    .stepType("complete")
+                                    .stepNumber(currentStep)
+                                    .finalAnswer(extractFinalOutput(lastStepResult))
                                     .build();
                             emitter.send(SseEmitter.event()
                                     .name("complete")
