@@ -2,9 +2,11 @@ package com.dyx.crossrow.agent;
 
 import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.model.AgentState;
+import com.dyx.crossrow.model.dto.StepResultDTO;
 import com.dyx.crossrow.exceptions.AgentStateException;
 import com.dyx.crossrow.exceptions.EmptyUserPromptException;
 import com.dyx.crossrow.utils.UserContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -119,20 +121,32 @@ public abstract class BaseAgent {
     public SseEmitter runStream(String userPrompt, Runnable onComplete) {
         SseEmitter emitter = new SseEmitter(330000L);
         final String capturedUserId = this.userId;
+        final ObjectMapper objectMapper = new ObjectMapper();
+        
         CompletableFuture.runAsync(() ->
                 {
                     try {
                         UserContext.setUserId(capturedUserId);
                         //check exceptions
                         if (this.state != AgentState.IDLE) {
+                            StepResultDTO errorResult = StepResultDTO.builder()
+                                    .stepType("error")
+                                    .error("CAN'T RUN PROXY IN STATE " + this.state)
+                                    .build();
                             emitter.send(SseEmitter.event()
-                                    .data("ERROR: CAN'T RUN PROXY IN STATE " + this.state, MediaType.TEXT_PLAIN));
+                                    .name("error")
+                                    .data(objectMapper.writeValueAsString(errorResult), MediaType.APPLICATION_JSON));
                             emitter.complete();
                             return;
                         }
                         if (StrUtil.isEmpty(userPrompt)) {
+                            StepResultDTO errorResult = StepResultDTO.builder()
+                                    .stepType("error")
+                                    .error("EMPTY PROMPT")
+                                    .build();
                             emitter.send(SseEmitter.event()
-                                    .data("ERROR: EMPTY PROMPT", MediaType.TEXT_PLAIN));
+                                    .name("error")
+                                    .data(objectMapper.writeValueAsString(errorResult), MediaType.APPLICATION_JSON));
                             emitter.complete();
                             return;
                         }
@@ -145,30 +159,54 @@ public abstract class BaseAgent {
                         return;
                     }
                     //  execute
-                    List<String> results = new ArrayList<>();
                     try {
                         for (int i = 0; i < maxStep && this.state != AgentState.FINISHED; i++) {
                             currentStep = i + 1;
                             log.info("Step: {}/{}", currentStep, maxStep);
-                            // get result from single step
-                            String stepResult = step();
-                            String stepMessage = stepResult;
-                            results.add(stepMessage);
-                            // 使用标准 SSE 格式发送
+                            
+                            // 使用结构化的步骤结果
+                            StepResultDTO stepResult;
+                            if (this instanceof ReActAgent) {
+                                ReActAgent reactAgent = (ReActAgent) this;
+                                // 使用回调方法，支持发送 pending 状态
+                                stepResult = reactAgent.stepWithCallback(currentStep, (pendingEvent) -> {
+                                    try {
+                                        emitter.send(SseEmitter.event()
+                                                .id(currentStep + "-pending")
+                                                .name("step")
+                                                .data(objectMapper.writeValueAsString(pendingEvent), MediaType.APPLICATION_JSON));
+                                    } catch (Exception e) {
+                                        log.error("Failed to send pending event: {}", e.getMessage());
+                                    }
+                                });
+                            } else {
+                                // 兼容非 ReActAgent 的情况
+                                String result = step();
+                                stepResult = StepResultDTO.builder()
+                                        .stepType("thinking")
+                                        .stepNumber(currentStep)
+                                        .thinking(result)
+                                        .build();
+                            }
+                            
+                            // 发送最终结果
                             emitter.send(SseEmitter.event()
                                     .id(String.valueOf(currentStep))
                                     .name("step")
-                                    .data(stepMessage, MediaType.TEXT_PLAIN));
+                                    .data(objectMapper.writeValueAsString(stepResult), MediaType.APPLICATION_JSON));
                         }
 
                         //CHECK STATUS
                         if (currentStep >= maxStep) {
                             this.state = AgentState.FINISHED;
-                            String finishMessage = "Terminated: Reached maximum step: " + maxStep;
-                            results.add(finishMessage);
+                            StepResultDTO completeResult = StepResultDTO.builder()
+                                    .stepType("complete")
+                                    .stepNumber(currentStep)
+                                    .finalAnswer("Terminated: Reached maximum step: " + maxStep)
+                                    .build();
                             emitter.send(SseEmitter.event()
                                     .name("complete")
-                                    .data(finishMessage, MediaType.TEXT_PLAIN));
+                                    .data(objectMapper.writeValueAsString(completeResult), MediaType.APPLICATION_JSON));
                             log.info("Agent Finished");
                         }
 

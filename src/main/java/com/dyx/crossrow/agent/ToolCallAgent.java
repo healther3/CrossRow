@@ -3,11 +3,13 @@ package com.dyx.crossrow.agent;
 import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.model.AgentState;
 import com.dyx.crossrow.model.ToolChoice;
+import com.dyx.crossrow.model.dto.StepResultDTO;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.*;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -33,6 +35,9 @@ public class ToolCallAgent extends ReActAgent{
     
     // 临时保存当前步骤的思考结果，用于返回给调用方
     private transient String currentThinkingResult;
+    
+    // 保存当前步骤的 token 使用信息
+    private transient Usage currentUsage;
 
     public ToolCallAgent(ToolCallback[] toolCallbacks, List<String> specialToolNames,
                          SimpleToolCallManager toolCallingManager, ToolChoice toolChoice,
@@ -49,6 +54,25 @@ public class ToolCallAgent extends ReActAgent{
     @Override
     protected String getThinkingResult() {
         return this.currentThinkingResult;
+    }
+    
+    @Override
+    protected List<StepResultDTO.ToolCallInfo> getPendingToolCallInfos() {
+        if (pendingToolCalls == null || pendingToolCalls.isEmpty()) {
+            return null;
+        }
+        return pendingToolCalls.stream()
+                .map(tc -> StepResultDTO.ToolCallInfo.builder()
+                        .toolName(tc.name())
+                        .arguments(tc.arguments())
+                        .status("pending")
+                        .build())
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    protected Usage getCurrentUsage() {
+        return this.currentUsage;
     }
 
     /**
@@ -99,6 +123,17 @@ public class ToolCallAgent extends ReActAgent{
 
             // save response for acting
             this.toolCallResponse = response;
+            
+            // 保存 token 使用信息
+            if (response.getMetadata() != null) {
+                this.currentUsage = response.getMetadata().getUsage();
+                if (this.currentUsage != null) {
+                    log.info("Token usage - prompt: {}, completion: {}, total: {}",
+                            currentUsage.getPromptTokens(),
+                            currentUsage.getCompletionTokens(),
+                            currentUsage.getTotalTokens());
+                }
+            }
 
             // add LLM info into message list(memory)
             //AssistantMessage assistantMessage = response.getResult().getOutput();
