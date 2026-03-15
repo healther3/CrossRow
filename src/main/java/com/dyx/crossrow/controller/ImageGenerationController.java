@@ -25,6 +25,9 @@ public class ImageGenerationController {
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false) BackGroundMode mode
     ) {
+        if (mode == BackGroundMode.DEFAULT) {
+            return "/api/images/default_BG.jpg";
+        }
         // 调用 Service 获取 URL 字符串
         return imageGenerationService.generateWorldView(lat, lng, mode);
     }

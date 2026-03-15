@@ -5,5 +5,6 @@ public enum BackGroundMode {
     RANDOM,
     LANDMARK,
     URBAN,
-    NATURE
+    NATURE,
+    DEFAULT
 }
