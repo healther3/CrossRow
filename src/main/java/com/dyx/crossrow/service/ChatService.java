@@ -351,12 +351,18 @@ public class ChatService {
         return Flux.merge(contentStream, titleStream);
     }
 
-    public SseEmitter doChatWithCrossRowAgentStream(String message, String chatId, String userId) {
+    public SseEmitter doChatWithCrossRowAgentStream(String message, String chatId, String userId,
+                                                     boolean enableReview, int maxReviewRetries) {
         chatSessionService.validateSessionOwnership(chatId, userId);
-        log.info("开始 Agent 对话流 - User: {}, Session: {}", userId, chatId);
+        log.info("开始 Agent 对话流 - User: {}, Session: {}, Review: {}, MaxRetries: {}", 
+                userId, chatId, enableReview, maxReviewRetries);
 
         //  通过工厂创建一个干净的、绑定了当前用户的 Agent
         CrossRowAgent agent = agentFactory.createAgent(userId, chatId);
+        
+        // 设置 Review 参数
+        agent.setReviewEnabled(enableReview);
+        agent.setMaxReviewRetries(maxReviewRetries);
 
         //  从 Redis 中提取历史记忆
         List<Message> history = chatMemory.get(chatId);
@@ -390,11 +396,15 @@ public class ChatService {
      * @param message user prompt
      * @param chatId conversation id
      * @param userId user id
+     * @param enableReview whether to enable review agent
+     * @param maxReviewRetries max review retry attempts
      * @return expert agent response in SSE form
      */
-    public SseEmitter doChatWithExpertStream(String message, String chatId, String userId) {
+    public SseEmitter doChatWithExpertStream(String message, String chatId, String userId,
+                                             boolean enableReview, int maxReviewRetries) {
         chatSessionService.validateSessionOwnership(chatId, userId);
-        log.info("开始 Expert 对话流 - User: {}, Session: {}", userId, chatId);
+        log.info("开始 Expert 对话流 - User: {}, Session: {}, Review: {}, MaxRetries: {}", 
+                userId, chatId, enableReview, maxReviewRetries);
 
         // 1. 先让 Orchestrator 判断路由到哪个专家
         String domain = expertOrchestrator.previewRoute(message);
@@ -402,6 +412,10 @@ public class ChatService {
 
         // 2. 创建对应的专家 Agent
         ExpertAgent expert = agentFactory.createExpertAgent(domain, userId, chatId);
+        
+        // 设置 Review 参数
+        expert.setReviewEnabled(enableReview);
+        expert.setMaxReviewRetries(maxReviewRetries);
 
         // 3. 从 Redis 中提取历史记忆
         List<Message> history = chatMemory.get(chatId);

@@ -178,7 +178,6 @@ public abstract class BaseAgent {
         
         CompletableFuture.runAsync(() ->
                 {
-                    String lastFinalAnswer = null;
                     try {
                         UserContext.setUserId(capturedUserId);
                         //check exceptions - 允许从 IDLE 或 WAITING_FOR_INPUT 状态启动
@@ -322,9 +321,9 @@ public abstract class BaseAgent {
                                     String feedback = "Review feedback: " + review.getReason() + ". Please address this issue.";
                                     messageList.add(new UserMessage(feedback));
                                     
-                                    // 继续执行几步
+                                    // 继续执行几步（每次重试最多执行 maxReviewRetries 步）
                                     this.state = AgentState.RUNNING;
-                                    for (int j = 0; j < 3 && this.state == AgentState.RUNNING; j++) {
+                                    for (int j = 0; j < maxReviewRetries && this.state == AgentState.RUNNING; j++) {
                                         currentStep++;
                                         log.info("Retry Step: {}/{}", currentStep, maxStep);
                                         

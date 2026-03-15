@@ -52,13 +52,17 @@ public class ChatController {
      * @param message user prompt
      * @param chatId conversation id
      * @param userId userid
+     * @param enableReview whether to enable review agent (default: false)
+     * @param maxReviewRetries max review retry attempts (default: 2)
      * @return agent text in sse form
      */
     @GetMapping(value = "/crossrow/agent/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatWithCrossRowAgent(@RequestParam("message") String message,
                                            @RequestParam("chatId") String chatId,
-                                           @RequestParam ("userId") String userId) {
-        return chatService.doChatWithCrossRowAgentStream(message, chatId, userId);
+                                           @RequestParam("userId") String userId,
+                                           @RequestParam(value = "enableReview", defaultValue = "false") boolean enableReview,
+                                           @RequestParam(value = "maxReviewRetries", defaultValue = "2") int maxReviewRetries) {
+        return chatService.doChatWithCrossRowAgentStream(message, chatId, userId, enableReview, maxReviewRetries);
     }
 
     /**
@@ -66,13 +70,17 @@ public class ChatController {
      * @param message user prompt
      * @param chatId conversation id
      * @param userId user id
+     * @param enableReview whether to enable review agent (default: false)
+     * @param maxReviewRetries max review retry attempts (default: 2)
      * @return expert agent response in sse form
      */
     @GetMapping(value = "/crossrow/expert/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatWithExpert(@RequestParam("message") String message,
                                      @RequestParam("chatId") String chatId,
-                                     @RequestParam("userId") String userId) {
-        return chatService.doChatWithExpertStream(message, chatId, userId);
+                                     @RequestParam("userId") String userId,
+                                     @RequestParam(value = "enableReview", defaultValue = "false") boolean enableReview,
+                                     @RequestParam(value = "maxReviewRetries", defaultValue = "2") int maxReviewRetries) {
+        return chatService.doChatWithExpertStream(message, chatId, userId, enableReview, maxReviewRetries);
     }
 
     /**
