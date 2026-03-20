@@ -1,6 +1,5 @@
 package com.dyx.crossrow.chatmemory;
 
-import com.dyx.crossrow.utils.UserContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,8 +37,9 @@ public class RedisChatMemory implements ChatMemory {
 
     @Override
     public void add(String conversationId, List<Message> messages) {
-        String userId = UserContext.getUserId();
-        String key = KEY_PREFIX + userId + ":" +conversationId;
+        // 不再依赖 ThreadLocal 的 userId，因为异步线程中可能为 null
+        // conversationId (chatId) 本身是 UUID，已经全局唯一
+        String key = KEY_PREFIX + conversationId;
 
         try {
             // 获取现有消息
@@ -74,8 +74,9 @@ public class RedisChatMemory implements ChatMemory {
 
     @Override
     public List<Message> get(String conversationId) {
-        String userId = UserContext.getUserId();
-        String key = KEY_PREFIX + userId + ":" +conversationId;
+        // 不再依赖 ThreadLocal 的 userId，因为异步线程中可能为 null
+        // conversationId (chatId) 本身是 UUID，已经全局唯一
+        String key = KEY_PREFIX + conversationId;
 
         try {
             List<Map<String, Object>> messagesData = getMessagesFromRedis(key);
@@ -91,8 +92,8 @@ public class RedisChatMemory implements ChatMemory {
 
     @Override
     public void clear(String conversationId) {
-        String userId = UserContext.getUserId();
-        String key = KEY_PREFIX + userId + ":" + conversationId;
+        // 不再依赖 ThreadLocal 的 userId
+        String key = KEY_PREFIX + conversationId;
         redisTemplate.delete(key);
         log.debug("Cleared conversation: {}", conversationId);
     }
