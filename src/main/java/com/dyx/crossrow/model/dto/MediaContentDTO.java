@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MediaContentDTO {
-    private String type;      // "image", "audio", "video"
-    private String mimeType;  // "image/png", "audio/mp3" 等
-    private String data;      // Base64 编码或 URL
+    private String type;      // "image"
+    private String mimeType;  // "image/png", "image/jpeg" 等
+    private String url;       // GCS URL
 }
