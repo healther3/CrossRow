@@ -1,9 +1,11 @@
 package com.dyx.crossrow.service;
 
 import cn.hutool.crypto.digest.BCrypt;
+import com.dyx.crossrow.model.Role;
 import com.dyx.crossrow.model.User;
 import com.dyx.crossrow.model.dto.AuthRequest;
 import com.dyx.crossrow.model.dto.AuthResponse;
+import com.dyx.crossrow.repository.RoleRepository;
 import com.dyx.crossrow.repository.UserRepository;
 import com.dyx.crossrow.utils.JwtUtils;
 import jakarta.annotation.Resource;
@@ -19,6 +21,8 @@ public class AuthService {
     private JwtUtils jwtUtils;
     @Resource
     private UserRepository userRepository;
+    @Resource
+    private RoleRepository roleRepository;
 
     /**
      *  User register
@@ -31,10 +35,15 @@ public class AuthService {
         // hash
         String hashedPassword = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
 
+        // 获取默认角色 USER
+        Role defaultRole = roleRepository.findByName("USER")
+                .orElseThrow(() -> new RuntimeException("默认角色 USER 不存在，请检查系统初始化"));
+
         // put data into db
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(hashedPassword);
+        user.setRole(defaultRole);
         userRepository.save(user);
     }
 
