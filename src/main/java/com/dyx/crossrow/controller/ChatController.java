@@ -1,19 +1,31 @@
 package com.dyx.crossrow.controller;
 
+import com.dyx.crossrow.model.dto.MediaContentDTO;
+import com.dyx.crossrow.model.dto.MultimodalChatRequestDTO;
+import com.dyx.crossrow.model.dto.MultimodalChatRequestDTO;
 import com.dyx.crossrow.service.ChatService;
+import com.dyx.crossrow.service.FileUploadService;
 import com.dyx.crossrow.service.ModelRouterService;
 import jakarta.annotation.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
+
+import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping
 public class ChatController {
     @Resource
     ChatService chatService;
+
+    @Resource
+    FileUploadService fileUploadService;
 
     /**
      *
@@ -141,6 +153,40 @@ public class ChatController {
     @GetMapping("/crossrow/route/decision")
     public ModelRouterService.RouteDecision getRouteDecision(@RequestParam("message") String message) {
         return chatService.previewRoute(message);
+    }
+
+    // ==================== Image Upload & Multimodal Chat ====================
+
+    /**
+     * Upload images to GCS for chat
+     * @param files image files to upload (PNG, JPEG, GIF, WebP)
+     * @param userId user id
+     * @return list of MediaContentDTO with GCS URLs
+     */
+    @PostMapping("/crossrow/image/upload")
+    public ResponseEntity<List<MediaContentDTO>> uploadImages(
+            @RequestParam("files") MultipartFile[] files,
+            @RequestParam("userId") String userId) throws IOException {
+        List<MediaContentDTO> imageList = fileUploadService.uploadMultipleImagesForChat(files, userId);
+        return ResponseEntity.ok(imageList);
+    }
+
+    /**
+     * Multimodal streaming chat - supports images
+     * Step 1: Upload images via /crossrow/image/upload to get GCS URLs
+     * Step 2: Call this endpoint with message and image list
+     *
+     * @param request contains message, chatId, userId, and media list with GCS URLs
+     * @return SSE stream with message and session_title events
+     */
+    @PostMapping(value = "/crossrow/chat/multimodal/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> multimodalChatStream(@RequestBody MultimodalChatRequestDTO request) {
+        return chatService.doChatStreamWithMedia(
+                request.getMessage(),
+                request.getMedia(),
+                request.getChatId(),
+                request.getUserId()
+        );
     }
 
 }
