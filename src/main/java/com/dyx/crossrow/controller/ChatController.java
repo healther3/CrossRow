@@ -78,20 +78,24 @@ public class ChatController {
 
     /**
      * Multi-agent endpoint: routes to appropriate expert (philosophy/psychology/sociology)
-     * @param message user prompt
-     * @param chatId conversation id
-     * @param userId user id
+     * Supports multimodal input.
+     * @param request contains message, media, chatId, and userId
      * @param enableReview whether to enable review agent (default: false)
      * @param maxReviewRetries max review retry attempts (default: 2)
      * @return expert agent response in sse form
      */
-    @GetMapping(value = "/crossrow/expert/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chatWithExpert(@RequestParam("message") String message,
-                                     @RequestParam("chatId") String chatId,
-                                     @RequestParam("userId") String userId,
+    @PostMapping(value = "/crossrow/expert/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatWithExpert(@RequestBody MultimodalChatRequestDTO request,
                                      @RequestParam(value = "enableReview", defaultValue = "false") boolean enableReview,
                                      @RequestParam(value = "maxReviewRetries", defaultValue = "2") int maxReviewRetries) {
-        return chatService.doChatWithExpertStream(message, chatId, userId, enableReview, maxReviewRetries);
+        return chatService.doChatWithExpertStream(
+                request.getMessage(),
+                request.getMedia(),
+                request.getChatId(),
+                request.getUserId(),
+                enableReview,
+                maxReviewRetries
+        );
     }
 
     /**
@@ -105,7 +109,7 @@ public class ChatController {
     // ==================== Model Router APIs ====================
 
     /**
-     * 智能路由流式聊天：AI 自动评审任务复杂度并选择模型
+     * 智能路由流式聊天：AI 自动评审任务复杂度并选择模型，支持多模态输入
      * - 简单任务 → Qwen（成本低）
      * - 复杂任务 → Gemini（能力强）
      * 
@@ -113,11 +117,14 @@ public class ChatController {
      * - event: message (chat content chunks)
      * - event: session_title (auto-generated title for new sessions)
      */
-    @GetMapping(value = "/crossrow/chat/auto-route/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chatWithAutoRoute(@RequestParam("message") String message,
-                                                           @RequestParam("chatId") String chatId,
-                                                           @RequestParam("userId") String userId) {
-        return chatService.doChatStreamWithAutoRoute(message, chatId, userId);
+    @PostMapping(value = "/crossrow/chat/auto-route/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> chatWithAutoRoute(@RequestBody MultimodalChatRequestDTO request) {
+        return chatService.doChatStreamWithAutoRoute(
+                request.getMessage(),
+                request.getMedia(),
+                request.getChatId(),
+                request.getUserId()
+        );
     }
 
     /**

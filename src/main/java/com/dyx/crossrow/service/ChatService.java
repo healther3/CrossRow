@@ -480,17 +480,18 @@ public class ChatService {
     /**
      * Multi-Agent Expert mode: routes to appropriate expert (philosophy/psychology/sociology)
      * @param message user prompt
+     * @param images image list
      * @param chatId conversation id
      * @param userId user id
      * @param enableReview whether to enable review agent
      * @param maxReviewRetries max review retry attempts
      * @return expert agent response in SSE form
      */
-    public SseEmitter doChatWithExpertStream(String message, String chatId, String userId,
+    public SseEmitter doChatWithExpertStream(String message, List<MediaContentDTO> images, String chatId, String userId,
                                              boolean enableReview, int maxReviewRetries) {
         chatSessionService.validateSessionOwnership(chatId, userId);
-        log.info("开始 Expert 对话流 - User: {}, Session: {}, Review: {}, MaxRetries: {}", 
-                userId, chatId, enableReview, maxReviewRetries);
+        log.info("开始 Expert 对话流 - User: {}, Session: {}, Images: {}, Review: {}, MaxRetries: {}", 
+                userId, chatId, images != null ? images.size() : 0, enableReview, maxReviewRetries);
 
         // 1. 先让 Orchestrator 判断路由到哪个专家
         String domain = expertOrchestrator.previewRoute(message);
@@ -505,13 +506,13 @@ public class ChatService {
 
         // 3. 从 Redis 中提取历史记忆
         List<Message> history = chatMemory.get(chatId);
-        if (!history.isEmpty()) {
+        if (history != null && !history.isEmpty()) {
             expert.setMessageList(new ArrayList<>(history));
             log.info("成功加载历史记忆，共 {} 条", history.size());
         }
 
         // 4. 执行专家 Agent，完成后保存记忆
-        SseEmitter response = expert.runStream(message, () -> {
+        SseEmitter response = expert.runStream(message, images, () -> {
             List<Message> updatedMemory = expert.getMessageList();
             chatMemory.clear(chatId);
             chatMemory.add(chatId, updatedMemory);
@@ -533,21 +534,23 @@ public class ChatService {
 
 
     /**
-     * 智能路由流式聊天：使用 AI 评审自动选择模型
+     * 智能路由流式聊天：使用 AI 评审自动选择模型，支持多模态输入
      * Returns ServerSentEvent to support custom event names (e.g., session_title).
      *
      * @param message 用户消息
+     * @param mediaContents 媒体内容列表（可为 null）
      * @param chatId  会话ID
      * @param userId  用户ID
      * @return SSE stream with content events and optional session_title event
      */
-    public Flux<ServerSentEvent<String>> doChatStreamWithAutoRoute(String message, String chatId, String userId) {
+    public Flux<ServerSentEvent<String>> doChatStreamWithAutoRoute(String message, List<MediaContentDTO> mediaContents, String chatId, String userId) {
         chatSessionService.validateSessionOwnership(chatId, userId);
         
         RouteDecision decision = modelRouterService.getRouteDecision(message);
-        log.info("流式AI评审路由: 复杂度={}, 选择模型={}", 
+        log.info("流式AI评审路由: 复杂度={}, 选择模型={}, 多模态={}", 
                 decision.review().isComplex() ? "复杂" : "简单", 
-                decision.selectedModel());
+                decision.selectedModel(),
+                mediaContents != null && !mediaContents.isEmpty());
 
         ChatModel selectedModel = modelRouterService.route(message);
         
@@ -561,10 +564,13 @@ public class ChatService {
                 )
                 .build();
 
+        // 构建 UserMessage (支持多模态)
+        UserMessage userMessage = mediaProcessingService.buildUserMessage(message, mediaContents);
+
         // 聊天内容流
         Flux<ServerSentEvent<String>> contentStream = routedClient
                 .prompt()
-                .user(message)
+                .messages(userMessage)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
                         .param("userId", userId))
                 .stream()
