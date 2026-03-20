@@ -2,7 +2,6 @@ package com.dyx.crossrow.controller;
 
 import com.dyx.crossrow.model.dto.MediaContentDTO;
 import com.dyx.crossrow.model.dto.MultimodalChatRequestDTO;
-import com.dyx.crossrow.model.dto.MultimodalChatRequestDTO;
 import com.dyx.crossrow.service.ChatService;
 import com.dyx.crossrow.service.FileUploadService;
 import com.dyx.crossrow.service.ModelRouterService;
@@ -186,6 +185,29 @@ public class ChatController {
                 request.getMedia(),
                 request.getChatId(),
                 request.getUserId()
+        );
+    }
+
+    /**
+     * Multimodal Agent chat - supports images with tool calling
+     * Step 1: Upload images via /crossrow/image/upload to get GCS URLs
+     * Step 2: Call this endpoint with message and image list
+     *
+     * @param request contains message, chatId, userId, and media list with GCS URLs
+     * @return SSE stream with agent step events
+     */
+    @PostMapping(value = "/crossrow/agent/chat/multimodal", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter multimodalAgentChat(
+            @RequestBody MultimodalChatRequestDTO request,
+            @RequestParam(value = "enableReview", defaultValue = "false") boolean enableReview,
+            @RequestParam(value = "maxReviewRetries", defaultValue = "2") int maxReviewRetries) {
+        return chatService.doChatWithCrossRowAgentStreamWithImages(
+                request.getMessage(),
+                request.getMedia(),
+                request.getChatId(),
+                request.getUserId(),
+                enableReview,
+                maxReviewRetries
         );
     }
 

@@ -446,6 +446,38 @@ public class ChatService {
     }
 
     /**
+     * Agent chat with image support
+     */
+    public SseEmitter doChatWithCrossRowAgentStreamWithImages(String message, List<MediaContentDTO> images,
+                                                     String chatId, String userId,
+                                                     boolean enableReview, int maxReviewRetries) {
+        chatSessionService.validateSessionOwnership(chatId, userId);
+        log.info("开始 Agent 对话流(带图片) - User: {}, Session: {}, Images: {}, Review: {}, MaxRetries: {}", 
+                userId, chatId, images != null ? images.size() : 0, enableReview, maxReviewRetries);
+
+        CrossRowAgent agent = agentFactory.createAgent(userId, chatId);
+        agent.setReviewEnabled(enableReview);
+        agent.setMaxReviewRetries(maxReviewRetries);
+
+        List<Message> history = chatMemory.get(chatId);
+        if (!history.isEmpty()) {
+            agent.setMessageList(new ArrayList<>(history));
+            log.info("成功加载历史记忆，共 {} 条", history.size());
+        }
+
+        SseEmitter response = agent.runStream(message, images, () -> {
+            List<Message> updatedMemory = agent.getMessageList();
+            chatMemory.clear(chatId);
+            chatMemory.add(chatId, updatedMemory);
+            log.info("Agent 完成，已保存 {} 条消息到内存", updatedMemory.size());
+        }, emitter -> {
+            chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message, emitter);
+        });
+
+        return response;
+    }
+
+    /**
      * Multi-Agent Expert mode: routes to appropriate expert (philosophy/psychology/sociology)
      * @param message user prompt
      * @param chatId conversation id

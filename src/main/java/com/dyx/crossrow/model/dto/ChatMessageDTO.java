@@ -12,6 +12,5 @@ import java.util.List;
 public class ChatMessageDTO {
     private String role;      // "user" 或 "assistant"
     private String content;
-    private List<MediaContentDTO> media;
 }
 
