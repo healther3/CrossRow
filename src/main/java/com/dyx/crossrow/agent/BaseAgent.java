@@ -3,6 +3,7 @@ package com.dyx.crossrow.agent;
 import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.model.AgentState;
 import com.dyx.crossrow.model.ReviewResult;
+import com.dyx.crossrow.model.dto.MediaContentDTO;
 import com.dyx.crossrow.model.dto.StepResultDTO;
 import com.dyx.crossrow.exceptions.AgentStateException;
 import com.dyx.crossrow.exceptions.EmptyUserPromptException;
@@ -13,12 +14,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.content.Media;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.springframework.http.MediaType;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -61,6 +65,15 @@ public abstract class BaseAgent {
      * @return execution result
      */
     public String run(String userPrompt) {
+        return run(userPrompt, null);
+    }
+
+    /**
+     * @param userPrompt user input
+     * @param images image list (GCS URLs)
+     * @return execution result
+     */
+    public String run(String userPrompt, List<MediaContentDTO> images) {
         //check exceptions - 允许从 IDLE 或 WAITING_FOR_INPUT 状态启动
         if (this.state != AgentState.IDLE && this.state != AgentState.WAITING_FOR_INPUT) {
             throw new AgentStateException(this.state);
@@ -71,7 +84,7 @@ public abstract class BaseAgent {
         // change state
         this.state = AgentState.RUNNING;
         //save context and result
-        messageList.add(new UserMessage(userPrompt));
+        messageList.add(buildUserMessage(userPrompt, images));
 
         try {
             List<String> results = new ArrayList<>();
@@ -156,7 +169,7 @@ public abstract class BaseAgent {
      * @return execution result in streaming form
      */
     public SseEmitter runStream(String userPrompt, Runnable onComplete) {
-        return runStream(userPrompt, onComplete, null);
+        return runStream(userPrompt, null, onComplete, null);
     }
 
     /**
@@ -166,6 +179,17 @@ public abstract class BaseAgent {
      * @return execution result in streaming form
      */
     public SseEmitter runStream(String userPrompt, Runnable onComplete, Consumer<SseEmitter> onEmitterReady) {
+        return runStream(userPrompt, null, onComplete, onEmitterReady);
+    }
+
+    /**
+     * @param userPrompt user input
+     * @param images image list (GCS URLs)
+     * @param onComplete callback to execute when agent finishes (for saving memory, etc.)
+     * @param onEmitterReady callback to execute when emitter is created (for sending early events like title updates)
+     * @return execution result in streaming form
+     */
+    public SseEmitter runStream(String userPrompt, List<MediaContentDTO> images, Runnable onComplete, Consumer<SseEmitter> onEmitterReady) {
         SseEmitter emitter = new SseEmitter(330000L);
         
         // 通知调用者 emitter 已准备好，可以用于发送额外事件（如标题更新）
@@ -206,7 +230,7 @@ public abstract class BaseAgent {
                         // change state
                         this.state = AgentState.RUNNING;
                         //save context and result
-                        messageList.add(new UserMessage(userPrompt));
+                        messageList.add(buildUserMessage(userPrompt, images));
                     } catch (Exception e){
                         emitter.completeWithError(e);
                         return;
@@ -405,5 +429,31 @@ public abstract class BaseAgent {
             log.info("Agent [{}] terminated, SSE finished", this.name);
         });
         return emitter;
+    }
+
+    /**
+     * Build UserMessage with optional images
+     */
+    protected UserMessage buildUserMessage(String text, List<MediaContentDTO> images) {
+        if (images == null || images.isEmpty()) {
+            return new UserMessage(text);
+        }
+
+        List<Media> mediaList = images.stream()
+                .filter(dto -> dto.getUrl() != null && !dto.getUrl().isEmpty())
+                .map(dto -> new Media(
+                        MimeTypeUtils.parseMimeType(dto.getMimeType()),
+                        URI.create(dto.getUrl())))
+                .toList();
+
+        if (mediaList.isEmpty()) {
+            return new UserMessage(text);
+        }
+
+        log.info("Building UserMessage with {} image(s)", mediaList.size());
+        return UserMessage.builder()
+                .text(text)
+                .media(mediaList)
+                .build();
     }
 }
