@@ -344,11 +344,12 @@ public class ChatService {
                         .build());
         
         // 异步生成标题，完成后发送 session_title 事件
+        final String finalChatId = chatId;
         Flux<ServerSentEvent<String>> titleStream = chatSessionService
                 .generateTitleIfNeededAsync(chatId, userId, message)
                 .map(title -> ServerSentEvent.<String>builder()
                         .event("session_title")
-                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\", \"chatId\":\"" + finalChatId + "\"}")
                         .build())
                 .flux();
         
@@ -394,11 +395,12 @@ public class ChatService {
                         .build());
 
         // 异步生成标题
+        final String finalChatId = chatId;
         Flux<ServerSentEvent<String>> titleStream = chatSessionService
                 .generateTitleIfNeededAsync(chatId, userId, message)
                 .map(title -> ServerSentEvent.<String>builder()
                         .event("session_title")
-                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\", \"chatId\":\"" + finalChatId + "\"}")
                         .build())
                 .flux();
 
@@ -581,11 +583,12 @@ public class ChatService {
                         .build());
         
         // 异步生成标题流
+        final String finalChatId = chatId;
         Flux<ServerSentEvent<String>> titleStream = chatSessionService
                 .generateTitleIfNeededAsync(chatId, userId, message)
                 .map(title -> ServerSentEvent.<String>builder()
                         .event("session_title")
-                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\", \"chatId\":\"" + finalChatId + "\"}")
                         .build())
                 .flux();
         
@@ -639,11 +642,12 @@ public class ChatService {
                         .build());
         
         // 异步生成标题流
+        final String finalChatId = chatId;
         Flux<ServerSentEvent<String>> titleStream = chatSessionService
                 .generateTitleIfNeededAsync(chatId, userId, message)
                 .map(title -> ServerSentEvent.<String>builder()
                         .event("session_title")
-                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\", \"chatId\":\"" + finalChatId + "\"}")
                         .build())
                 .flux();
         

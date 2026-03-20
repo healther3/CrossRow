@@ -154,7 +154,7 @@ public class ChatSessionService {
             
             // 通过 SSE 通知前端标题更新
             if (emitter != null) {
-                sendTitleUpdateEvent(emitter, title);
+                sendTitleUpdateEvent(emitter, chatId, title);
             }
         } catch (Exception e) {
             log.warn("Failed to auto-generate title for session {}: {}", chatId, e.getMessage());
@@ -164,14 +164,14 @@ public class ChatSessionService {
     /**
      * 发送标题更新的 SSE 事件
      */
-    private void sendTitleUpdateEvent(SseEmitter emitter, String title) {
+    private void sendTitleUpdateEvent(SseEmitter emitter, String chatId, String title) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, String> data = Map.of("title", title);
+            Map<String, String> data = Map.of("title", title, "chatId", chatId);
             emitter.send(SseEmitter.event()
                     .name("session_title")
                     .data(objectMapper.writeValueAsString(data), MediaType.APPLICATION_JSON));
-            log.debug("Sent session_title event: {}", title);
+            log.debug("Sent session_title event: chatId={}, title={}", chatId, title);
         } catch (Exception e) {
             log.warn("Failed to send session_title event: {}", e.getMessage());
         }
