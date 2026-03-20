@@ -28,6 +28,17 @@ public class ChatSessionService {
 
     private static final String DEFAULT_SESSION_TITLE = "new session";
     
+    /**
+     * 判断标题是否需要自动生成
+     */
+    private boolean needsAutoGenerateTitle(String title) {
+        return title == null 
+                || title.isBlank() 
+                || DEFAULT_SESSION_TITLE.equalsIgnoreCase(title)
+                || "New Chat".equalsIgnoreCase(title)
+                || "新会话".equals(title);
+    }
+    
     private final ChatSessionRepository sessionRepository;
     private final ChatMemory chatMemory;
     private final ChatModelProvider chatModelProvider;
@@ -132,32 +143,61 @@ public class ChatSessionService {
      * @param userId 用户ID
      * @param userMessage 用户消息
      * @param emitter SSE emitter，用于通知前端标题更新（可为 null）
+     * @deprecated 使用 {@link #autoGenerateTitleIfNeededSync(String, String, String, SseEmitter)} 代替，
+     *             因为 @Async 方法在 SseEmitter 场景下可能导致 emitter 已关闭后才发送事件
      */
     @Async
+    @Deprecated
     public void autoGenerateTitleIfNeeded(String chatId, String userId, String userMessage, SseEmitter emitter) {
+        doGenerateTitleIfNeeded(chatId, userId, userMessage, emitter);
+    }
+
+    /**
+     * 同步生成会话标题（如果是第一条消息），并通过 SSE 通知前端
+     * 专门用于 SseEmitter 场景，确保在 emitter.complete() 之前发送标题事件
+     * 
+     * @param chatId 会话ID
+     * @param userId 用户ID
+     * @param userMessage 用户消息
+     * @param emitter SSE emitter，用于通知前端标题更新
+     */
+    public void autoGenerateTitleIfNeededSync(String chatId, String userId, String userMessage, SseEmitter emitter) {
+        doGenerateTitleIfNeeded(chatId, userId, userMessage, emitter);
+    }
+
+    /**
+     * 实际执行标题生成的内部方法
+     */
+    private void doGenerateTitleIfNeeded(String chatId, String userId, String userMessage, SseEmitter emitter) {
+        log.info("[TitleGen] 开始检查是否需要生成标题 - chatId={}, userId={}, emitter={}", 
+                chatId, userId, emitter != null ? "存在" : "null");
         try {
             ChatSession session = sessionRepository.findByIdAndUserId(chatId, userId).orElse(null);
             if (session == null) {
-                log.debug("Session {} not found, skipping title generation", chatId);
+                log.info("[TitleGen] Session {} not found, skipping title generation", chatId);
                 return;
             }
             
-            if (!DEFAULT_SESSION_TITLE.equals(session.getTitle())) {
-                log.debug("Session {} already has custom title: {}", chatId, session.getTitle());
+            if (!needsAutoGenerateTitle(session.getTitle())) {
+                log.info("[TitleGen] Session {} already has custom title: '{}', skipping", chatId, session.getTitle());
                 return;
             }
 
+            log.info("[TitleGen] Session {} 需要生成标题，当前标题: '{}'", chatId, session.getTitle());
             String title = generateTitleFromMessage(userMessage);
             session.setTitle(title);
             sessionRepository.save(session);
-            log.info("Auto-generated title for session {}: {}", chatId, title);
+            log.info("[TitleGen] Auto-generated title for session {}: {}", chatId, title);
             
             // 通过 SSE 通知前端标题更新
             if (emitter != null) {
+                log.info("[TitleGen] 准备发送 session_title 事件...");
                 sendTitleUpdateEvent(emitter, chatId, title);
+            } else {
+                log.info("[TitleGen] emitter 为 null，跳过发送 SSE 事件");
             }
         } catch (Exception e) {
-            log.warn("Failed to auto-generate title for session {}: {}", chatId, e.getMessage());
+            log.warn("[TitleGen] Failed to auto-generate title for session {}: {}", chatId, e.getMessage(), e);
         }
     }
 
@@ -168,12 +208,14 @@ public class ChatSessionService {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             Map<String, String> data = Map.of("title", title, "chatId", chatId);
+            String jsonData = objectMapper.writeValueAsString(data);
+            log.info("[TitleGen] 发送 SSE 事件: event=session_title, data={}", jsonData);
             emitter.send(SseEmitter.event()
                     .name("session_title")
-                    .data(objectMapper.writeValueAsString(data), MediaType.APPLICATION_JSON));
-            log.debug("Sent session_title event: chatId={}, title={}", chatId, title);
+                    .data(jsonData, MediaType.APPLICATION_JSON));
+            log.info("[TitleGen] session_title 事件发送成功!");
         } catch (Exception e) {
-            log.warn("Failed to send session_title event: {}", e.getMessage());
+            log.warn("[TitleGen] Failed to send session_title event: {}", e.getMessage(), e);
         }
     }
 
@@ -216,25 +258,29 @@ public class ChatSessionService {
      * @return Mono<String> 生成的标题，如果不需要生成则为 empty
      */
     public Mono<String> generateTitleIfNeededAsync(String chatId, String userId, String userMessage) {
+        log.info("[TitleGen-Flux] 开始异步检查是否需要生成标题 - chatId={}, userId={}", chatId, userId);
         return Mono.fromCallable(() -> {
             ChatSession session = sessionRepository.findByIdAndUserId(chatId, userId).orElse(null);
             if (session == null) {
-                log.debug("Session {} not found, skipping title generation", chatId);
+                log.info("[TitleGen-Flux] Session {} not found, skipping title generation", chatId);
                 return Optional.<String>empty();
             }
             
-            if (!DEFAULT_SESSION_TITLE.equals(session.getTitle())) {
-                log.debug("Session {} already has custom title: {}", chatId, session.getTitle());
+            if (!needsAutoGenerateTitle(session.getTitle())) {
+                log.info("[TitleGen-Flux] Session {} already has custom title: '{}', skipping", chatId, session.getTitle());
                 return Optional.<String>empty();
             }
 
+            log.info("[TitleGen-Flux] Session {} 需要生成标题，当前标题: '{}'", chatId, session.getTitle());
             String title = generateTitleFromMessage(userMessage);
             session.setTitle(title);
             sessionRepository.save(session);
-            log.info("Auto-generated title for session {}: {}", chatId, title);
+            log.info("[TitleGen-Flux] Auto-generated title for session {}: {}", chatId, title);
             return Optional.of(title);
         })
         .subscribeOn(Schedulers.boundedElastic())
-        .flatMap(opt -> opt.map(Mono::just).orElse(Mono.empty()));
+        .flatMap(opt -> opt.map(Mono::just).orElse(Mono.empty()))
+        .doOnNext(title -> log.info("[TitleGen-Flux] 标题生成成功，准备发送 session_title 事件: {}", title))
+        .doOnError(e -> log.error("[TitleGen-Flux] 标题生成失败: {}", e.getMessage()));
     }
 }

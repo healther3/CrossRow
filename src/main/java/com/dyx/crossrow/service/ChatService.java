@@ -430,6 +430,7 @@ public class ChatService {
 
         // 让 Agent 开始推理想象并执行工具 (它会自动将新问题 add 进 messageList)
         // 使用回调在 Agent 完成后保存内存，避免异步执行时机问题
+        // 注意：标题生成必须在 onComplete 中同步执行，确保在 emitter.complete() 之前发送
         SseEmitter response = agent.runStream(message, () -> {
             // 提取 Agent 思考完毕后的完整大脑状态
             List<Message> updatedMemory = agent.getMessageList();
@@ -440,8 +441,8 @@ public class ChatService {
             chatMemory.add(chatId, updatedMemory);
             log.info("Agent 完成，已保存 {} 条消息到内存", updatedMemory.size());
         }, emitter -> {
-            // emitter 创建后立即触发异步标题生成，生成完成后会通过 SSE 通知前端
-            chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message, emitter);
+            // 同步生成标题，确保在 emitter.complete() 之前发送 session_title 事件
+            chatSessionService.autoGenerateTitleIfNeededSync(chatId, userId, message, emitter);
         });
 
         return response;
@@ -473,7 +474,8 @@ public class ChatService {
             chatMemory.add(chatId, updatedMemory);
             log.info("Agent 完成，已保存 {} 条消息到内存", updatedMemory.size());
         }, emitter -> {
-            chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message, emitter);
+            // 同步生成标题，确保在 emitter.complete() 之前发送 session_title 事件
+            chatSessionService.autoGenerateTitleIfNeededSync(chatId, userId, message, emitter);
         });
 
         return response;
@@ -520,8 +522,8 @@ public class ChatService {
             chatMemory.add(chatId, updatedMemory);
             log.info("{} 专家完成，已保存 {} 条消息到内存", domain, updatedMemory.size());
         }, emitter -> {
-            // emitter 创建后立即触发异步标题生成，生成完成后会通过 SSE 通知前端
-            chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message, emitter);
+            // 同步生成标题，确保在 emitter.complete() 之前发送 session_title 事件
+            chatSessionService.autoGenerateTitleIfNeededSync(chatId, userId, message, emitter);
         });
 
         return response;

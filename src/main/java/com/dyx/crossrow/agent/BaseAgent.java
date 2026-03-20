@@ -175,27 +175,23 @@ public abstract class BaseAgent {
     /**
      * @param userPrompt user input
      * @param onComplete callback to execute when agent finishes (for saving memory, etc.)
-     * @param onEmitterReady callback to execute when emitter is created (for sending early events like title updates)
+     * @param onBeforeComplete callback to execute before emitter.complete() (for sending title updates, etc.)
      * @return execution result in streaming form
      */
-    public SseEmitter runStream(String userPrompt, Runnable onComplete, Consumer<SseEmitter> onEmitterReady) {
-        return runStream(userPrompt, null, onComplete, onEmitterReady);
+    public SseEmitter runStream(String userPrompt, Runnable onComplete, Consumer<SseEmitter> onBeforeComplete) {
+        return runStream(userPrompt, null, onComplete, onBeforeComplete);
     }
 
     /**
      * @param userPrompt user input
      * @param images image list (GCS URLs)
      * @param onComplete callback to execute when agent finishes (for saving memory, etc.)
-     * @param onEmitterReady callback to execute when emitter is created (for sending early events like title updates)
+     * @param onBeforeComplete callback to execute before emitter.complete() (for sending title updates, etc.)
+     *                         This is called synchronously in the async thread, ensuring events are sent before stream closes.
      * @return execution result in streaming form
      */
-    public SseEmitter runStream(String userPrompt, List<MediaContentDTO> images, Runnable onComplete, Consumer<SseEmitter> onEmitterReady) {
+    public SseEmitter runStream(String userPrompt, List<MediaContentDTO> images, Runnable onComplete, Consumer<SseEmitter> onBeforeComplete) {
         SseEmitter emitter = new SseEmitter(330000L);
-        
-        // 通知调用者 emitter 已准备好，可以用于发送额外事件（如标题更新）
-        if (onEmitterReady != null) {
-            onEmitterReady.accept(emitter);
-        }
         
         final String capturedUserId = this.userId;
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -405,7 +401,22 @@ public abstract class BaseAgent {
                             }
                         }
 
+                        // 在 emitter.complete() 之前发送额外事件（如标题更新）
+                        // 这确保事件在流关闭前发送
+                        if (onBeforeComplete != null) {
+                            try {
+                                log.info("[Agent] 执行 onBeforeComplete 回调（标题生成）...");
+                                onBeforeComplete.accept(emitter);
+                                log.info("[Agent] onBeforeComplete 回调执行完成");
+                            } catch (Exception e) {
+                                log.error("Error executing onBeforeComplete callback: {}", e.getMessage());
+                            }
+                        } else {
+                            log.info("[Agent] onBeforeComplete 回调为 null，跳过");
+                        }
+
                         // successfully terminated
+                        log.info("[Agent] 准备调用 emitter.complete()");
                         emitter.complete();
                     } catch (Exception e) {
                         this.state = AgentState.ERROR;
