@@ -7,10 +7,12 @@ import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
 import com.dyx.crossrow.model.ChatSession;
+import com.dyx.crossrow.model.dto.MediaContentDTO;
 import com.dyx.crossrow.orchestrator.ExpertOrchestrator;
 import com.dyx.crossrow.service.ModelRouterService.RouteDecision;
 import com.dyx.crossrow.tool.ImageGenerationTool;
 import com.dyx.crossrow.tool.WebSearchTool;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
@@ -71,6 +73,9 @@ public class ChatService {
 
     @jakarta.annotation.Resource
     private ModelRouterService modelRouterService;
+
+    @jakarta.annotation.Resource
+    private MediaProcessingService mediaProcessingService;
 
     /**
      * Initialize the ChatService with ChatModelProvider for unified model management.
@@ -348,6 +353,55 @@ public class ChatService {
                 .flux();
         
         // 合并两个流：内容流和标题流并行执行
+        return Flux.merge(contentStream, titleStream);
+    }
+
+    /**
+     * Multimodal chat with streaming output.
+     * Supports images and audio from GCS URLs.
+     *
+     * @param message user text message
+     * @param mediaContents list of media (images/audio) with GCS URLs
+     * @param chatId chat conversation ID
+     * @param userId user ID
+     * @return SSE stream with content events and optional session_title event
+     */
+    public Flux<ServerSentEvent<String>> doChatStreamWithMedia(
+            String message, 
+            List<MediaContentDTO> mediaContents,
+            String chatId, 
+            String userId) {
+        
+        chatSessionService.validateSessionOwnership(chatId, userId);
+        ChatClient chatClient = buildChatClientForUser(userId);
+
+        // 构建多模态 UserMessage
+        UserMessage userMessage = mediaProcessingService.buildUserMessage(message, mediaContents);
+        log.info("Multimodal chat - User: {}, Session: {}, Media count: {}", 
+                userId, chatId, mediaContents != null ? mediaContents.size() : 0);
+
+        // 聊天内容流
+        Flux<ServerSentEvent<String>> contentStream = chatClient
+                .prompt()
+                .messages(userMessage)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                        .param("userId", userId))
+                .stream()
+                .content()
+                .map(content -> ServerSentEvent.<String>builder()
+                        .event("message")
+                        .data(content)
+                        .build());
+
+        // 异步生成标题
+        Flux<ServerSentEvent<String>> titleStream = chatSessionService
+                .generateTitleIfNeededAsync(chatId, userId, message)
+                .map(title -> ServerSentEvent.<String>builder()
+                        .event("session_title")
+                        .data("{\"title\":\"" + title.replace("\"", "\\\"") + "\"}")
+                        .build())
+                .flux();
+
         return Flux.merge(contentStream, titleStream);
     }
 
