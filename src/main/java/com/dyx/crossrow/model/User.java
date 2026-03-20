@@ -17,7 +17,11 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String password; // 注意：实际生产中这里存的必须是加密后的哈希值
+    private String password;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+        @JoinColumn(name = "role_id")
+    private Role role;
 
     @Column(name = "custom_background_url", length = 500)
     private String customBackgroundUrl;
