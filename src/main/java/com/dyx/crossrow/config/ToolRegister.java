@@ -56,6 +56,11 @@ public class ToolRegister {
         return new AskHumanTool();
     }
 
+    @Bean("crossRowTools")
+    public ToolCallback[] crossRowTools(@Qualifier("sharedTools") ToolCallback[] sharedTools) {
+        return sharedTools;
+    }
+
     // 通用工具（所有 Agent 共享）
     @Bean("sharedTools")
     public ToolCallback[] sharedTools(WebSearchTool webSearchTool,
