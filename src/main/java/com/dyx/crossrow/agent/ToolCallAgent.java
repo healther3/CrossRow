@@ -222,16 +222,10 @@ public class ToolCallAgent extends ReActAgent{
         }
 
         try {
-            // execute tools
-            VertexAiGeminiChatOptions options =
-                    VertexAiGeminiChatOptions.builder()
-                            .toolCallbacks(this.toolCallbacks)
-                            .build();
-
             // 把带着工具名册的 Options 塞进 Prompt
             Prompt toolPrompt = new Prompt(getMessageList());
-            //ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(toolPrompt, toolCallResponse);
-            ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(toolPrompt, toolCallResponse);
+            // 使用动态工具集执行工具调用（传入 Agent 自己的工具集）
+            ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(toolPrompt, toolCallResponse, this.toolCallbacks);
             // add tool execution messages to message list
             setMessageList(toolExecutionResult.conversationHistory());
             ToolResponseMessage toolResponseMessage = (ToolResponseMessage) toolExecutionResult.conversationHistory().getLast();
