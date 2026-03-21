@@ -1,0 +1,64 @@
+# ====== 根目录配置 ======
+docker-compose.override.yml
+
+# ====== 通用 ======
+*.log
+.DS_Store
+
+# ====== IDE ======
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ====== 后端 (backend/) ======
+backend/application-local.yml
+backend/application-test.yml
+backend/config/*.json
+backend/target/
+backend/tmp/
+backend/generated-images/
+backend/HELP.md
+backend/.mvn/wrapper/maven-wrapper.jar
+!backend/**/src/main/**/target/
+!backend/**/src/test/**/target/
+
+# STS
+backend/.apt_generated
+backend/.classpath
+backend/.factorypath
+backend/.project
+backend/.settings
+backend/.springBeans
+backend/.sts4-cache
+
+# NetBeans
+backend/nbproject/private/
+backend/nbbuild/
+backend/dist/
+backend/nbdist/
+backend/.nb-gradle/
+backend/build/
+!backend/**/src/main/**/build/
+!backend/**/src/test/**/build/
+
+# ====== 前端 (frontend/) ======
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/coverage/
+
+# 前端日志
+frontend/logs/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
