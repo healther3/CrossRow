@@ -1,0 +1,31 @@
+name: Auto Deploy to Server
+
+# 触发条件：当有代码 push 到 master 分支时
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest # GitHub 会免费为你提供一台临时的 Ubuntu 机器来执行任务
+    steps:
+      - name:  登录服务器并自动拉取、构建、重启
+        # 使用业界最流行的 SSH 动作插件
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }} # 自动读取你刚才配置的私钥
+          # 下面就是机器人在你服务器上要敲的命令
+          script: |
+            cd /root/CrossRow
+            
+            # 2. 拉取最新代码
+            git pull origin master
+            
+            # 3. 让 Docker 在后台重新构建并平滑重启所有容器
+            docker compose up -d --build
+            
+            # 4. 清理旧的无用镜像，防止把服务器硬盘塞满 (非常重要的最佳实践！)
+            docker image prune -f

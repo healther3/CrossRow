@@ -3,7 +3,7 @@ FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -Dmaven.test.skip=true
 
 # 阶段2：运行
 FROM eclipse-temurin:21-jre-alpine
