@@ -88,7 +88,11 @@ services:
       - backend
     restart: unless-stopped
 
+# 固定卷名：与目录无关，始终复用 crossrow_* 里的数据（换文件夹也不会建新空卷）
 volumes:
   redis-data:
+    name: crossrow_redis-data
   pg-data:
+    name: crossrow_pg-data
   es_data:
+    name: crossrow_es_data
