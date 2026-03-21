@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const AuthContext = createContext();
 
+const baseUrlAPI = import.meta.env.PROD ? '' : 'http://localhost:8123';
+
 export function AuthProvider({ children }) {
     const [token, setToken] = useState(localStorage.getItem('jwt_token') || null);
     const [userId, setUserId] = useState(localStorage.getItem('user_id') || null);
@@ -62,7 +64,7 @@ export function AuthProvider({ children }) {
 
     // 登录方法
     const login = async (username, password) => {
-        const response = await originalFetchOrFetch('http://localhost:8123/api/auth/login', {
+        const response = await originalFetchOrFetch(`${baseUrlAPI}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
@@ -83,7 +85,7 @@ export function AuthProvider({ children }) {
     const originalFetchOrFetch = window.fetch;
 
     const register = async (username, password) => {
-        const response = await originalFetchOrFetch('http://localhost:8123/api/auth/register', {
+        const response = await originalFetchOrFetch(`${baseUrlAPI}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
