@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'SF Pro Text', 'Helvetica Neue', sans-serif; /* Apple 字体栈 */
+
+  /* 核心背景：模拟蓝天白云的渐变 */
+  background: radial-gradient(
+          circle at 50% 30%,
+          #a2c0c8 0%,       /* 中心亮白 */
+          #b2dcef 40%,      /* 中间淡蓝 */
+          #5999c1 100%      /* 边缘深一点的蓝 */
+  );
+
+  min-height: 100vh;
+  overflow: hidden; /* 防止出现不必要的滚动条 */
+}
+
+.vn-title-container {
+    position: relative;
+    display: inline-block;
+    font-family: "Times New Roman", Times, serif; /* 强制使用衬线体 */
+    line-height: 1; /* 防止行高影响对齐 */
+}
+
+/* 顶层：渐变文字 */
+.vn-title-fill {
+    position: relative;
+    z-index: 10; /* 在最上层 */
+
+    /* 天空渐变色：深蓝 -> 青蓝 -> 纯白 */
+    background: linear-gradient(180deg, #010d1e 0%, rgba(0, 48, 244, 0.75) 50%, #5db4d8 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* 底层：白色描边 + 阴影 */
+.vn-title-stroke {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0; /* 在下层 */
+
+    /* 技巧：用 text-stroke 生成粗描边 */
+    -webkit-text-stroke: 12px white; /* 描边宽度，根据字号调整 */
+    color: white; /* 描边颜色 */
+
+    /* 给白色描边加一个淡淡的阴影，增加立体感 */
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+/* 1. 复古游戏字体栈 */
+.font-vn {
+    /* 优先使用 MS Mincho (日系游戏标配) 或 Courier (打字机风格) */
+    font-family: "MS Mincho", "Hiragino Mincho ProN", "Courier New", Courier, "Times New Roman", serif;
+    letter-spacing: 0.05em; /* 字间距稍微宽一点，更有呼吸感 */
+    line-height: 1.8; /* 行高要大，便于阅读 */
+}
+
+/* 2. 强烈的文字描边 (关键！让白字在亮背景上也看得清) */
+.vn-text-shadow {
+    color: #ffffff; /* 字体纯白 */
+    /* 模拟 1px 的硬黑边，而不是模糊的阴影 */
+    text-shadow:
+            -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px  1px 0 #000,
+            1px  1px 0 #000,
+            2px  2px 4px rgba(0,0,0,0.5); /* 再加一点点柔和阴影增加立体感 */
+}
+
+/* 3. 输入框的复古光标动画 */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+.cursor-blink::after {
+    content: '▋';
+    margin-left: 4px;
+    animation: blink 1s step-end infinite;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+/* 针对火狐浏览器 (Firefox) 的基础支持 */
+.custom-scrollbar {
+    /* 火狐原生不支持精细的 hover 呼出，为了极致的沉浸感，直接隐藏，但不影响滚轮滑动 */
+    scrollbar-width: none;
+}
+
+/* 针对 Chrome / Safari / Edge 的高级自定义 */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px; /* 极细的触发判定区 */
+    background-color: transparent; /* 轨道完全透明 */
+}
+
+/* 轨道背景 (Track) */
+.custom-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+/* 滚动滑块 (Thumb) 默认完全透明 */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 10px;
+}
+
+/* 【关键修改】：删除了容器 hover，只有鼠标精准悬停在滚动条本身时才显示半透明 */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 正在按住拖拽滑块时，变得更亮一点，提供操作反馈 */
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: rgba(255, 255, 255, 0.6);
+}
