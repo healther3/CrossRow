@@ -20,7 +20,9 @@ public class WebConfiguration implements WebMvcConfigurer {
                         "http://localhost:80",
                         "http://localhost",
                         "http://47.236.147.135",
-                        "http://47.236.147.135:80"
+                        "http://47.236.147.135:80",
+                        "https://c4rows.com",
+                        "https://www.c4rows.com"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
