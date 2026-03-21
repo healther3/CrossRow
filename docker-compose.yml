@@ -62,7 +62,7 @@ services:
       retries: 5
 
   backend:
-    build: .
+    build: ./backend
     container_name: crossrow-backend
     ports:
       - "127.0.0.1:8123:8123"
@@ -76,7 +76,16 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_ELASTICSEARCH_HOST=elasticsearch
     volumes:
-      - ./config:/app/config
+      - ./backend/config:/app/config
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: crossrow-frontend
+    ports:
+      - "127.0.0.1:80:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
