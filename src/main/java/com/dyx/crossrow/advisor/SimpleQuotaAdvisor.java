@@ -1,22 +1,27 @@
 package com.dyx.crossrow.advisor;
 
+import com.dyx.crossrow.exceptions.QuotaExceededException;
+import com.dyx.crossrow.model.QuotaType;
+import com.dyx.crossrow.service.QuotaService;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.api.AdvisorChain;
 import org.springframework.ai.chat.client.advisor.api.BaseAdvisor;
 import org.springframework.core.Ordered;
-import org.springframework.scheduling.annotation.Scheduled;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimpleQuotaAdvisor implements BaseAdvisor {
-    private final Map<String, AtomicInteger> dailyUsage = new ConcurrentHashMap<>();
-    private final int dailyLimit;
-    private int order = Ordered.HIGHEST_PRECEDENCE;
+    private final QuotaService quotaService;
+    private final QuotaType quotaType;
+    private final int order;
 
-    public SimpleQuotaAdvisor(int dailyLimit) {
-        this.dailyLimit = dailyLimit;
+    public SimpleQuotaAdvisor(QuotaService quotaService, QuotaType quotaType) {
+        this(quotaService, quotaType, Ordered.HIGHEST_PRECEDENCE);
+    }
+
+    public SimpleQuotaAdvisor(QuotaService quotaService, QuotaType quotaType, int order) {
+        this.quotaService = quotaService;
+        this.quotaType = quotaType;
+        this.order = order;
     }
 
     @Override
@@ -27,10 +32,10 @@ public class SimpleQuotaAdvisor implements BaseAdvisor {
             throw new RuntimeException("未提供用户ID");
         }
 
-        AtomicInteger usage = dailyUsage.computeIfAbsent(userId, k -> new AtomicInteger(0));
-
-        if (usage.get() >= dailyLimit) {
-            throw new RuntimeException("今日配额已用完: " + usage.get() + "/" + dailyLimit);
+        if (!quotaService.hasQuota(userId, quotaType)) {
+            int limit = quotaService.getQuotaLimit(userId, quotaType);
+            int usage = quotaService.getCurrentUsage(userId, quotaType);
+            throw new QuotaExceededException(userId, quotaType, limit, usage);
         }
 
         return request;
@@ -38,10 +43,9 @@ public class SimpleQuotaAdvisor implements BaseAdvisor {
 
     @Override
     public ChatClientResponse after(ChatClientResponse response, AdvisorChain chain) {
-        // 调用成功后增加计数
         String userId = (String) response.context().get("userId");
         if (userId != null) {
-            dailyUsage.get(userId).incrementAndGet();
+            quotaService.consumeQuota(userId, quotaType);
         }
         return response;
     }
@@ -49,11 +53,5 @@ public class SimpleQuotaAdvisor implements BaseAdvisor {
     @Override
     public int getOrder() {
         return this.order;
-    }
-
-    // 定时重置
-    @Scheduled(cron = "0 0 0 * * ?")
-    public void resetDaily() {
-        dailyUsage.clear();
     }
 }

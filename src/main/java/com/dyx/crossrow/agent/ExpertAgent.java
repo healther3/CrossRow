@@ -3,7 +3,9 @@ package com.dyx.crossrow.agent;
 import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
+import com.dyx.crossrow.model.QuotaType;
 import com.dyx.crossrow.model.ToolChoice;
+import com.dyx.crossrow.service.QuotaService;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ public class ExpertAgent extends ToolCallAgent {
                        ToolCallStrategy toolCallStrategy,
                        ChatModel chatModel,
                        SimpleAuthAdvisor simpleAuthAdvisor,
+                       QuotaService quotaService,
                        Resource systemPromptResource,
                        Resource nextStepPromptResource) {
         super(domainTools,
@@ -61,7 +64,7 @@ public class ExpertAgent extends ToolCallAgent {
                 .defaultSystem(getSystemPrompt())
                 .defaultAdvisors(
                         simpleAuthAdvisor,
-                        new SimpleQuotaAdvisor(5),
+                        new SimpleQuotaAdvisor(quotaService, QuotaType.AGENT),
                         new MyLogAdvisor(100)
                 )
                 .defaultOptions(options)

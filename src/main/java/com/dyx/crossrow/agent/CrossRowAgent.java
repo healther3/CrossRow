@@ -3,7 +3,9 @@ package com.dyx.crossrow.agent;
 import com.dyx.crossrow.advisor.MyLogAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
+import com.dyx.crossrow.model.QuotaType;
 import com.dyx.crossrow.model.ToolChoice;
+import com.dyx.crossrow.service.QuotaService;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import org.springframework.ai.chat.client.ChatClient;
@@ -32,12 +34,16 @@ public class CrossRowAgent extends ToolCallAgent{
     @jakarta.annotation.Resource
     private final SimpleAuthAdvisor simpleAuthAdvisor;
 
+    @jakarta.annotation.Resource
+    private final QuotaService quotaService;
+
     public CrossRowAgent(@Qualifier("crossRowTools") ToolCallback[] crossRowTools,
                          List<String> specialToolNames,
                          SimpleToolCallManager toolCallingManager,
                          ToolCallStrategy toolCallStrategy,
                          @Qualifier("vertexAiGeminiChat") ChatModel chatModel,
                          SimpleAuthAdvisor simpleAuthAdvisor,
+                         QuotaService quotaService,
                          @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                          @Value("classpath:/prompts/next-step-prompt.st") Resource nextStepPromptResource,
                          @Qualifier("hybridRagAdvisor") Advisor hybridRagAdvisor) {
@@ -48,6 +54,7 @@ public class CrossRowAgent extends ToolCallAgent{
                 toolCallStrategy);
         this.hybridRagAdvisor = hybridRagAdvisor;
         this.simpleAuthAdvisor = simpleAuthAdvisor;
+        this.quotaService = quotaService;
 
         // set name
         setName("NoName");
@@ -68,18 +75,12 @@ public class CrossRowAgent extends ToolCallAgent{
                 .defaultSystem(getSystemPrompt())
                 .defaultAdvisors(
                         simpleAuthAdvisor,
-                        new SimpleQuotaAdvisor(5),
-                        // customized logger advisor
+                        new SimpleQuotaAdvisor(quotaService, QuotaType.AGENT),
                         new MyLogAdvisor(100)
-                        // customized enhanced advisor
-                        // new ReReadingAdvisor()
-                        //hybridRagAdvisor
                 )
                 .defaultOptions(options)
                 .build();
         setChatClient(chatClient);
     }
-
-
 
 }

@@ -5,6 +5,7 @@ import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.agent.ReviewAgent;
 import com.dyx.crossrow.service.ChatModelProvider;
+import com.dyx.crossrow.service.QuotaService;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import org.springframework.ai.tool.ToolCallback;
@@ -26,6 +27,7 @@ public class AgentFactory {
     private final ToolCallStrategy toolCallStrategy;
     private final SimpleAuthAdvisor simpleAuthAdvisor;
     private final ChatModelProvider chatModelProvider;
+    private final QuotaService quotaService;
     
     @Autowired(required = false)
     private ReviewAgent reviewAgent;
@@ -46,6 +48,7 @@ public class AgentFactory {
                         ToolCallStrategy toolCallStrategy,
                         SimpleAuthAdvisor simpleAuthAdvisor,
                         ChatModelProvider chatModelProvider,
+                        QuotaService quotaService,
                         @Qualifier("philosophyTools") ToolCallback[] philosophyTools,
                         @Qualifier("psychologyTools") ToolCallback[] psychologyTools,
                         @Qualifier("sociologyTools") ToolCallback[] sociologyTools,
@@ -58,6 +61,7 @@ public class AgentFactory {
         this.toolCallStrategy = toolCallStrategy;
         this.simpleAuthAdvisor = simpleAuthAdvisor;
         this.chatModelProvider = chatModelProvider;
+        this.quotaService = quotaService;
         this.philosophyTools = philosophyTools;
         this.psychologyTools = psychologyTools;
         this.sociologyTools = sociologyTools;
@@ -109,6 +113,7 @@ public class AgentFactory {
                 toolCallStrategy,
                 chatModelProvider.getGeminiModel(),
                 simpleAuthAdvisor,
+                quotaService,
                 prompt,
                 nextStepPrompt
         );

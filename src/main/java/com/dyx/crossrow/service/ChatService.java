@@ -7,6 +7,7 @@ import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
 import com.dyx.crossrow.model.ChatSession;
+import com.dyx.crossrow.model.QuotaType;
 import com.dyx.crossrow.model.dto.MediaContentDTO;
 import com.dyx.crossrow.orchestrator.ExpertOrchestrator;
 import com.dyx.crossrow.service.ModelRouterService.RouteDecision;
@@ -77,19 +78,23 @@ public class ChatService {
     @jakarta.annotation.Resource
     private MediaProcessingService mediaProcessingService;
 
+    @jakarta.annotation.Resource
+    private QuotaService quotaService;
+
     /**
      * Initialize the ChatService with ChatModelProvider for unified model management.
      * Models are selected based on user preferences stored in the database.
      */
     public ChatService(@Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                        AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor,
-                       ChatModelProvider chatModelProvider) {
+                       ChatModelProvider chatModelProvider, QuotaService quotaService) {
 
         this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
         this.agentFactory = agentFactory;
         this.chatMemory = chatMemory;
         this.simpleAuthAdvisor = simpleAuthAdvisor;
         this.chatModelProvider = chatModelProvider;
+        this.quotaService = quotaService;
     }
 
     /**
@@ -101,7 +106,7 @@ public class ChatService {
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
                         simpleAuthAdvisor,
-                        new SimpleQuotaAdvisor(100),
+                        new SimpleQuotaAdvisor(quotaService, QuotaType.CHAT),
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         new MyLogAdvisor(100)
                 )
@@ -562,7 +567,7 @@ public class ChatService {
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
                         simpleAuthAdvisor,
-                        new SimpleQuotaAdvisor(100),
+                        new SimpleQuotaAdvisor(quotaService, QuotaType.CHAT),
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         new MyLogAdvisor(100)
                 )
@@ -624,7 +629,7 @@ public class ChatService {
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
                         simpleAuthAdvisor,
-                        new SimpleQuotaAdvisor(100),
+                        new SimpleQuotaAdvisor(quotaService, QuotaType.CHAT),
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         new MyLogAdvisor(100)
                 )
