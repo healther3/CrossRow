@@ -61,6 +61,24 @@ services:
       timeout: 10s
       retries: 5
 
+  backend:
+    build: .
+    container_name: crossrow-backend
+    ports:
+      - "127.0.0.1:8123:8123"
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/postgres
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_ELASTICSEARCH_HOST=elasticsearch
+    volumes:
+      - ./config:/app/config
+    restart: unless-stopped
+
 volumes:
   redis-data:
   pg-data:
