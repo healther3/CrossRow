@@ -67,17 +67,28 @@ services:
     ports:
       - "127.0.0.1:8123:8123"
     depends_on:
-      - postgres
-      - redis
-      - elasticsearch
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=local
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/gcp-key.json
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/postgres
       - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}
       - SPRING_ELASTICSEARCH_HOST=elasticsearch
     volumes:
       - ./backend/config:/app/config
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8123"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   frontend:
     build: ./frontend
@@ -85,7 +96,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
 # 固定卷名：与目录无关，始终复用 crossrow_* 里的数据（换文件夹也不会建新空卷）

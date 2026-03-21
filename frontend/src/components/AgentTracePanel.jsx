@@ -69,7 +69,7 @@ const ToolCallItem = ({ tool }) => {
                     }`}>
                         {isError ? <XCircle size={16} /> : <CheckCircle size={16} />}
                         <span className="tracking-wider">
-                            {isError ? '[SUPERVISOR]: APPROVED' : '[SUPERVISOR]: REJECTED(ERROR)'}
+                            {isError ? '[SUPERVISOR]: REJECTED(ERROR)' : '[SUPERVISOR]: APPROVED'}
                         </span>
                     </div>
                     {tool.elapsedMs && <span className="text-slate-500 text-xs font-mono">{tool.elapsedMs}ms</span>}
@@ -136,28 +136,26 @@ export default function AgentTracePanel({ steps, tokenUsage }) {
                             {/* 渲染 Review 结果 */}
                             {step.stepType === 'review_result' && (
                                 <div className={`p-3 rounded-lg border mt-2 group transition-all duration-300 ${
-                                    step.approved
+                                    step.reviewApproved
                                         ? 'bg-green-950/20 border-green-500/30'
                                         : 'bg-red-950/20 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
                                 }`}>
-                                    {/* 头部状态：APPROVED / REJECTED */}
                                     <div className={`font-bold flex items-center gap-2 text-sm ${
-                                        step.approved ? 'text-green-400' : 'text-red-400'
+                                        step.reviewApproved ? 'text-green-400' : 'text-red-400'
                                     }`}>
-                                        {step.approved ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                                        {step.reviewApproved ? <CheckCircle size={16} /> : <XCircle size={16} />}
                                         <span className="tracking-wider uppercase">
-                            [SUPERVISOR]: {step.approved ? 'APPROVED' : 'REJECTED'}
+                            [SUPERVISOR]: {step.reviewApproved ? 'APPROVED' : 'REJECTED'}
                         </span>
                                     </div>
 
-                                    {/* 核心修复：独立渲染 reason 模块，不再受限于 approved 状态 */}
-                                    {step.reason && (
+                                    {step.reviewReason && (
                                         <div className={`text-xs mt-3 ml-6 p-3 rounded-md font-mono border ${
-                                            step.approved
+                                            step.reviewApproved
                                                 ? 'bg-green-950/10 border-green-500/20 text-green-400/80'
                                                 : 'bg-red-950/20 border-red-500/30 text-red-400/90'
                                         }`}>
-                                            <span className="opacity-60">Reason: </span> {step.reason}
+                                            <span className="opacity-60">Reason: </span> {step.reviewReason}
                                         </div>
                                     )}
                                 </div>
