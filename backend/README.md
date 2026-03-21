@@ -5,20 +5,17 @@ A Spring Boot AI application that combines LLM capabilities with RAG (Retrieval 
 > **Status**:  Under Active Development
 
 ## Todo List
-- [ ] Persistence of conversation sessions allows users to have multiple different conversations with isolation.
 - [ ] implement tool class that enable agent to access/modify documents
-- [ ] implement full frontend/backend service
-- [ ] Add separate model calls and isolation for tenants.
+- [ ] improve full frontend/backend service
 - [ ] Implement hot restart for appropriate services such as tenant model configuration.
-- [ ] To enable on-demand and configuration-based invocation of multiple models, a routing class and interface need to be implemented.
-- [ ] Complete SSE data streaming information : step_type, tool_name，tool_arguments, tool_result, token_usage,  progress, elapsed_ms, status...
-- [ ] Add multimodal calling interface
+- [ ] Add concurrent multimodal calling interface
 - [ ] Add a more robust reflection mechanism: Pre-Retrieval: Query Rewrite/HyDE/Query Routing + Retrieval (Finished) + Post-Retrieval (Rerank/Context Compression) + Generation: Strict Prompting & Fallback
 - [ ] Using ragas/TruLens to evaluate the quality of the generated responses
 - [ ] Compress expired memory contexts/RAG retrievals, determine their validity, and persist them.
 - [ ] Build a more accurate and superior RAG index, and if possible, add evaluation.
 - [ ] A2A,K8S,Skills
 - [ ] sending email tool, shell tool， 
+- [ ] memory, db visualization
 
 ## Overview
 
