@@ -63,6 +63,18 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(PromptInjectionDetectedException.class)
+    public ResponseEntity<Map<String, Object>> handlePromptInjection(PromptInjectionDetectedException e) {
+        log.warn("Prompt injection blocked: {}", e.getTriggeredInput());
+
+        Map<String, Object> response = Map.of(
+                "success", false,
+                "error", "您的输入包含不安全的内容，请重新输入"
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
     @ExceptionHandler(SessionAccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> SessionAccessDeniedException(SessionAccessDeniedException e) {
         log.warn("ReAct failed: {}", e.getMessage());  // 只记录简单日志
