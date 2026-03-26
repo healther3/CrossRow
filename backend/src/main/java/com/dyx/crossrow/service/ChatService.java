@@ -1,6 +1,7 @@
 package com.dyx.crossrow.service;
 
 import com.dyx.crossrow.advisor.MyLogAdvisor;
+import com.dyx.crossrow.advisor.PromptInjectionGuardAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.agent.CrossRowAgent;
@@ -108,7 +109,8 @@ public class ChatService {
                         simpleAuthAdvisor,
                         new SimpleQuotaAdvisor(quotaService, QuotaType.CHAT),
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        new MyLogAdvisor(100)
+                        new MyLogAdvisor(100),
+                        new PromptInjectionGuardAdvisor()
                 )
                 .build();
     }
@@ -118,7 +120,9 @@ public class ChatService {
      */
     private ChatClient buildDefaultChatClientForUser(String userId) {
         ChatModel model = chatModelProvider.getModelForUser(userId);
-        return ChatClient.builder(model).build();
+        return ChatClient.builder(model)
+                .defaultAdvisors(new PromptInjectionGuardAdvisor())
+                .build();
     }
 
 
@@ -569,7 +573,8 @@ public class ChatService {
                         simpleAuthAdvisor,
                         new SimpleQuotaAdvisor(quotaService, QuotaType.CHAT),
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        new MyLogAdvisor(100)
+                        new MyLogAdvisor(100),
+                        new PromptInjectionGuardAdvisor()
                 )
                 .build();
 
@@ -631,7 +636,8 @@ public class ChatService {
                         simpleAuthAdvisor,
                         new SimpleQuotaAdvisor(quotaService, QuotaType.CHAT),
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        new MyLogAdvisor(100)
+                        new MyLogAdvisor(100),
+                        new PromptInjectionGuardAdvisor()
                 )
                 .build();
 

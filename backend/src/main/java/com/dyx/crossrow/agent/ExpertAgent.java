@@ -1,6 +1,7 @@
 package com.dyx.crossrow.agent;
 
 import com.dyx.crossrow.advisor.MyLogAdvisor;
+import com.dyx.crossrow.advisor.PromptInjectionGuardAdvisor;
 import com.dyx.crossrow.advisor.SimpleAuthAdvisor;
 import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.model.QuotaType;
@@ -65,7 +66,8 @@ public class ExpertAgent extends ToolCallAgent {
                 .defaultAdvisors(
                         simpleAuthAdvisor,
                         new SimpleQuotaAdvisor(quotaService, QuotaType.AGENT),
-                        new MyLogAdvisor(100)
+                        new MyLogAdvisor(100),
+                        new PromptInjectionGuardAdvisor()
                 )
                 .defaultOptions(options)
                 .build();

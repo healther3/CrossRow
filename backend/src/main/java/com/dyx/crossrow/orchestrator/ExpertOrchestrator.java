@@ -1,5 +1,6 @@
 package com.dyx.crossrow.orchestrator;
 
+import com.dyx.crossrow.advisor.PromptInjectionGuardAdvisor;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -41,6 +42,7 @@ public class ExpertOrchestrator {
 
         this.routerClient = ChatClient.builder(chatModel)
                 .defaultSystem(promptTemplate.render())
+                .defaultAdvisors(new PromptInjectionGuardAdvisor())
                 .build();
     }
 
