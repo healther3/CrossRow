@@ -133,6 +133,23 @@ export default function AgentTracePanel({ steps, tokenUsage }) {
                                 <ToolCallItem key={tIdx} tool={tool} />
                             ))}
 
+                            {/* 渲染注入攻击拦截 */}
+                            {step.stepType === 'injection_blocked' && (
+                                <div className="p-3 rounded-lg border mt-2 bg-yellow-950/20 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                                    <div className="font-bold flex items-center gap-2 text-sm text-yellow-400">
+                                        <ShieldAlert size={16} />
+                                        <span className="tracking-wider uppercase">
+                                            [SUPERVISOR]: INJECTION ATTACK DETECTED
+                                        </span>
+                                    </div>
+                                    {step.reason && (
+                                        <div className="text-xs mt-3 ml-6 p-3 rounded-md font-mono border bg-yellow-950/20 border-yellow-500/20 text-yellow-400/90">
+                                            <span className="opacity-60">Reason: </span> {step.reason}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* 渲染 Review 结果 */}
                             {step.stepType === 'review_result' && (
                                 <div className={`p-3 rounded-lg border mt-2 group transition-all duration-300 ${

@@ -498,8 +498,15 @@ export default function ChatPage() {
                     async onopen(response) {
                         if (!response.ok) {
                             let errMsg = 'Request failed';
-                            try { const body = await response.json(); errMsg = body.error || errMsg; } catch(e) {}
-                            throw new Error(errMsg);
+                            let errType = null;
+                            try {
+                                const body = await response.json();
+                                errMsg = body.error || errMsg;
+                                errType = body.type || null;
+                            } catch(e) {}
+                            const err = new Error(errMsg);
+                            err.type = errType;
+                            throw err;
                         }
                     },
                     onmessage(ev) {
@@ -540,13 +547,27 @@ export default function ChatPage() {
             } catch (err) {
                 console.error(err);
                 const errorText = err?.message || 'An unexpected error occurred.';
-                setMessages(prev => prev.map(msg =>
-                    msg.id === aiMsgId ? { ...msg, text: errorText, systemLog: null } : msg
-                ));
+
+                if (err.type === 'PROMPT_INJECTION') {
+                    setMessages(prev => prev.map(msg =>
+                        msg.id === aiMsgId ? {
+                            ...msg,
+                            text: '',
+                            systemLog: null,
+                            steps: [{ stepType: 'injection_blocked', reason: errorText }]
+                        } : msg
+                    ));
+                } else {
+                    setMessages(prev => prev.map(msg =>
+                        msg.id === aiMsgId ? { ...msg, text: errorText, systemLog: null } : msg
+                    ));
+                }
+
                 targetTextRef.current = "";
                 currentMsgIdRef.current = null;
                 setIsSending(false);
             }
+
         }
     };
     // UI 颜色计算
