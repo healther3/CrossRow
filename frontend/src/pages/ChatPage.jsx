@@ -106,7 +106,12 @@ export default function ChatPage() {
             eventSourceRef.current = null;
         }
 
-        setIsSending(false); setAgentQuestion(null); currentMsgIdRef.current = null; targetTextRef.current = ""; displayedIndexRef.current = 0; stepContentsRef.current.clear();
+        setIsSending(false);
+        setAgentQuestion(null);
+        currentMsgIdRef.current = null;
+        targetTextRef.current = "";
+        displayedIndexRef.current = 0;
+        stepContentsRef.current.clear();
 
         setChatId(selectedId);
         setMessages([{ id: Date.now(), text: "[System]: Accessing memory archives...", sender: "system" }]);
@@ -124,7 +129,12 @@ export default function ChatPage() {
             eventSourceRef.current = null;
         }
 
-        setIsSending(false); setAgentQuestion(null); currentMsgIdRef.current = null; targetTextRef.current = ""; displayedIndexRef.current = 0; stepContentsRef.current.clear();
+        setIsSending(false);
+        setAgentQuestion(null);
+        currentMsgIdRef.current = null;
+        targetTextRef.current = "";
+        displayedIndexRef.current = 0;
+        stepContentsRef.current.clear();
 
         setChatId(newId);
         setMessages([
@@ -478,14 +488,20 @@ export default function ChatPage() {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    // 完美对应后端的 MultimodalChatRequestDTO 结构
                     body: JSON.stringify({
                         message: userText || (mediaPayload.length > 0 ? "Please analyze the attached image." : ""),
-                        media: mediaPayload.length > 0 ? mediaPayload : null, // 如果没图，传 null 或 []，后端会自动降级
+                        media: mediaPayload.length > 0 ? mediaPayload : null,
                         chatId: actualId,
                         userId: userId
                     }),
                     signal: ctrl.signal,
+                    async onopen(response) {
+                        if (!response.ok) {
+                            let errMsg = 'Request failed';
+                            try { const body = await response.json(); errMsg = body.error || errMsg; } catch(e) {}
+                            throw new Error(errMsg);
+                        }
+                    },
                     onmessage(ev) {
                         // 调试：打印每一个到达的事件，无论名称是什么
                         console.log(`[Raw SSE]: event=${ev.event || 'message'} data=${ev.data}`);
@@ -522,8 +538,14 @@ export default function ChatPage() {
                 });
 
             } catch (err) {
-                setIsSending(false);
                 console.error(err);
+                const errorText = err?.message || 'An unexpected error occurred.';
+                setMessages(prev => prev.map(msg =>
+                    msg.id === aiMsgId ? { ...msg, text: errorText, systemLog: null } : msg
+                ));
+                targetTextRef.current = "";
+                currentMsgIdRef.current = null;
+                setIsSending(false);
             }
         }
     };
