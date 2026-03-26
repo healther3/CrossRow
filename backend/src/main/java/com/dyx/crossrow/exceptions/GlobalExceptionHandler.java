@@ -69,7 +69,8 @@ public class GlobalExceptionHandler {
 
         Map<String, Object> response = Map.of(
                 "success", false,
-                "error", "您的输入包含不安全的内容，请重新输入"
+                "type", "PROMPT_INJECTION",
+                "error", "Potential prompt injection attack detected. Your input has been blocked for security reasons."
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);

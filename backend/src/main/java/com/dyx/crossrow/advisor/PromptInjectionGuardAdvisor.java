@@ -98,9 +98,10 @@ public class PromptInjectionGuardAdvisor implements BaseAdvisor {
     }
 
     /**
-     * Detection pipeline: regex patterns → zero-width char strip → Base64 decode → typoglycemia fuzzy match
+     * Detection pipeline: regex patterns → zero-width char strip → Base64 decode → typoglycemia fuzzy match.
+     * Public static so BaseAgent can call it directly (agent flow bypasses the advisor).
      */
-    private boolean detectInjection(String raw) {
+    public static boolean detectInjection(String raw) {
         String input = raw.length() > MAX_INPUT_LENGTH ? raw.substring(0, MAX_INPUT_LENGTH) : raw;
         String normalized = input.replaceAll("\\s+", " ").trim();
 
@@ -127,7 +128,7 @@ public class PromptInjectionGuardAdvisor implements BaseAdvisor {
     /**
      * Extract Base64 candidate segments, decode, and check for injection keywords / patterns.
      */
-    private boolean detectBase64Payload(String input) {
+    private static boolean detectBase64Payload(String input) {
         var matcher = BASE64_CANDIDATE.matcher(input);
         while (matcher.find()) {
             try {
@@ -147,7 +148,7 @@ public class PromptInjectionGuardAdvisor implements BaseAdvisor {
      * Check each word against fuzzy targets — same first/last letter, same sorted middle letters,
      * but different ordering (= the word was scrambled to dodge keyword filters).
      */
-    private boolean detectTypoglycemia(String input) {
+    private static boolean detectTypoglycemia(String input) {
         String[] words = input.toLowerCase().split("\\W+");
         for (String word : words) {
             if (word.length() < 4) continue;

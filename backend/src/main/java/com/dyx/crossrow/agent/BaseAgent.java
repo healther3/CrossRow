@@ -5,8 +5,10 @@ import com.dyx.crossrow.model.AgentState;
 import com.dyx.crossrow.model.ReviewResult;
 import com.dyx.crossrow.model.dto.MediaContentDTO;
 import com.dyx.crossrow.model.dto.StepResultDTO;
+import com.dyx.crossrow.advisor.PromptInjectionGuardAdvisor;
 import com.dyx.crossrow.exceptions.AgentStateException;
 import com.dyx.crossrow.exceptions.EmptyUserPromptException;
+import com.dyx.crossrow.exceptions.PromptInjectionDetectedException;
 import com.dyx.crossrow.utils.UserContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -74,14 +76,16 @@ public abstract class BaseAgent {
      * @return execution result
      */
     public String run(String userPrompt, List<MediaContentDTO> images) {
-        //check exceptions - 允许从 IDLE 或 WAITING_FOR_INPUT 状态启动
         if (this.state != AgentState.IDLE && this.state != AgentState.WAITING_FOR_INPUT) {
             throw new AgentStateException(this.state);
         }
         if (StrUtil.isEmpty(userPrompt)) {
             throw new EmptyUserPromptException();
         }
-        // change state
+        if (PromptInjectionGuardAdvisor.detectInjection(userPrompt)) {
+            throw new PromptInjectionDetectedException(
+                    userPrompt.length() <= 200 ? userPrompt : userPrompt.substring(0, 200) + "...");
+        }
         this.state = AgentState.RUNNING;
         //save context and result
         messageList.add(buildUserMessage(userPrompt, images));
@@ -223,7 +227,10 @@ public abstract class BaseAgent {
                             emitter.complete();
                             return;
                         }
-                        // change state
+                        if (PromptInjectionGuardAdvisor.detectInjection(userPrompt)) {
+                            throw new PromptInjectionDetectedException(
+                                    userPrompt.length() <= 200 ? userPrompt : userPrompt.substring(0, 200) + "...");
+                        }
                         this.state = AgentState.RUNNING;
                         //save context and result
                         messageList.add(buildUserMessage(userPrompt, images));
