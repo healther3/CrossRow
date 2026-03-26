@@ -48,6 +48,11 @@ public class StepResultDTO {
      * 错误信息
      */
     private String error;
+
+    /**
+     * 通用原因说明（如注入拦截等安全事件）
+     */
+    private String reason;
     
     /**
      * Review 是否通过

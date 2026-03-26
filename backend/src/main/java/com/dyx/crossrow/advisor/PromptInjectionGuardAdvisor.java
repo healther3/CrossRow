@@ -50,8 +50,11 @@ public class PromptInjectionGuardAdvisor implements BaseAdvisor {
 
             // Chinese injection patterns
             Pattern.compile("忽略(所有|之前|上面|上述|以上|全部)?(的)?(指令|提示|规则|系统|约束|限制)"),
-            Pattern.compile("(复述|重复|念出|输出|打印)(上面|之前|以上|你的)?(的)?(英文|内容|文字|指令|提示|系统提示|prompt)"),
+            Pattern.compile("(复述|重复|念出|输出|打印|告诉|说出|说说|透露|分享)(我)?(上面|之前|以上|你的)?(的)?(英文|内容|文字|指令|提示|系统提示|prompt)"),
             Pattern.compile("(输出|显示|告诉我|透露|泄露)(你的)?(系统|原始|完整|内部)?(的)?(指令|提示|prompt|设定|设置)"),
+            Pattern.compile("(上面|以上|之前|前面)(的)?(英文|英语|English|内容|原文)(是什么|是啥|内容|文字)?"),
+            Pattern.compile("(悄悄|偷偷|私下|秘密)(地|的)?(告诉|说|透露|输出|显示|给我)"),
+            Pattern.compile("(需要|必须|应该|要)(听|服从|遵从|遵守|执行)(我的|我)(一切|所有|全部|每一个)?(指令|命令|要求|指示)"),
             Pattern.compile("你现在(是|扮演|变成|切换为|充当)"),
             Pattern.compile("进入(开发者|调试|管理员|无限制)模式"),
             Pattern.compile("(无视|绕过|突破|跳过)(你的)?(安全|限制|规则|约束|保护)")

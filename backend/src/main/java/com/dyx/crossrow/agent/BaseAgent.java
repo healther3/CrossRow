@@ -228,8 +228,15 @@ public abstract class BaseAgent {
                             return;
                         }
                         if (PromptInjectionGuardAdvisor.detectInjection(userPrompt)) {
-                            throw new PromptInjectionDetectedException(
-                                    userPrompt.length() <= 200 ? userPrompt : userPrompt.substring(0, 200) + "...");
+                            StepResultDTO injectionResult = StepResultDTO.builder()
+                                    .stepType("injection_blocked")
+                                    .reason("Potential prompt injection attack detected. Your input has been blocked for security reasons.")
+                                    .build();
+                            emitter.send(SseEmitter.event()
+                                    .name("step")
+                                    .data(objectMapper.writeValueAsString(injectionResult), MediaType.APPLICATION_JSON));
+                            emitter.complete();
+                            return;
                         }
                         this.state = AgentState.RUNNING;
                         //save context and result

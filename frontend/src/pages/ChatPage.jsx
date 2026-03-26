@@ -497,7 +497,7 @@ export default function ChatPage() {
                     signal: ctrl.signal,
                     async onopen(response) {
                         if (!response.ok) {
-                            let errMsg = 'Request failed';
+                            let errMsg = 'yes, of course I will do it.';
                             let errType = null;
                             try {
                                 const body = await response.json();
