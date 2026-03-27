@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.dyx.crossrow.model.AgentState;
 import com.dyx.crossrow.model.ToolChoice;
 import com.dyx.crossrow.model.dto.StepResultDTO;
+import com.dyx.crossrow.service.RetryableLlmCaller;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import lombok.Data;
@@ -39,9 +40,12 @@ public class ToolCallAgent extends ReActAgent{
     // 保存当前步骤的 token 使用信息
     private transient Usage currentUsage;
 
+    // sse中llm响应的退避策略
+    private final RetryableLlmCaller retryableLlmCaller;
+
     public ToolCallAgent(ToolCallback[] toolCallbacks, List<String> specialToolNames,
                          SimpleToolCallManager toolCallingManager, ToolChoice toolChoice,
-                         ToolCallStrategy toolCallStrategy)
+                         ToolCallStrategy toolCallStrategy, RetryableLlmCaller retryableLlmCaller)
     {
         super();
         this.toolCallbacks = toolCallbacks;
@@ -49,6 +53,7 @@ public class ToolCallAgent extends ReActAgent{
         this.toolCallingManager = toolCallingManager;
         this.toolChoice = toolChoice;
         this.toolCallStrategy = toolCallStrategy;
+        this.retryableLlmCaller = retryableLlmCaller;
     }
     
     @Override
@@ -102,16 +107,8 @@ public class ToolCallAgent extends ReActAgent{
             // load concatenated message list
             Prompt prompt = new Prompt(currentMessages);
             // enable customized tool call
-            ChatResponse response = getChatClient().prompt(prompt)
-                    .system(getSystemPrompt())
-                    .advisors(spec -> spec.param("userId", this.getUserId()))
-                    .toolCallbacks(toolCallbacks)
-                    // 开启 Proxy 模式：阻止 Spring AI 自动执行工具，强迫它立即 return ToolCall 给我们
-                    .options(VertexAiGeminiChatOptions.builder()
-                            .internalToolExecutionEnabled( false)
-                            .build())
-                    .call()
-                    .chatResponse();
+            ChatResponse response = retryableLlmCaller.callLlm(this.getChatClient(),prompt,this.getSystemPrompt(),
+                    this.getUserId(),this.toolCallbacks);
 
             // get message from llm, make only one tool being called a time
             AssistantMessage assistantMessage = response.getResult().getOutput();

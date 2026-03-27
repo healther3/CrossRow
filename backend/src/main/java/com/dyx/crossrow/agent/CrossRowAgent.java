@@ -7,6 +7,7 @@ import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.model.QuotaType;
 import com.dyx.crossrow.model.ToolChoice;
 import com.dyx.crossrow.service.QuotaService;
+import com.dyx.crossrow.service.RetryableLlmCaller;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import org.springframework.ai.chat.client.ChatClient;
@@ -47,12 +48,14 @@ public class CrossRowAgent extends ToolCallAgent{
                          QuotaService quotaService,
                          @Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                          @Value("classpath:/prompts/next-step-prompt.st") Resource nextStepPromptResource,
-                         @Qualifier("hybridRagAdvisor") Advisor hybridRagAdvisor) {
+                         @Qualifier("hybridRagAdvisor") Advisor hybridRagAdvisor,
+                         RetryableLlmCaller retryableLlmCaller) {
         super(  crossRowTools,
                 List.of("askHuman","terminate"),
                 toolCallingManager,
                 ToolChoice.AUTO,
-                toolCallStrategy);
+                toolCallStrategy,
+                retryableLlmCaller);
         this.hybridRagAdvisor = hybridRagAdvisor;
         this.simpleAuthAdvisor = simpleAuthAdvisor;
         this.quotaService = quotaService;
