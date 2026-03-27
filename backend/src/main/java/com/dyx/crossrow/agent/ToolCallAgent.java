@@ -106,9 +106,18 @@ public class ToolCallAgent extends ReActAgent{
         try {
             // load concatenated message list
             Prompt prompt = new Prompt(currentMessages);
-            // enable customized tool call
-            ChatResponse response = retryableLlmCaller.callLlm(this.getChatClient(),prompt,this.getSystemPrompt(),
-                    this.getUserId(),this.toolCallbacks);
+            // enable customized tool call with retry on transient failures
+            ChatResponse response = retryableLlmCaller.callWithRetry(() ->
+                    getChatClient().prompt(prompt)
+                            .system(getSystemPrompt())
+                            .advisors(spec -> spec.param("userId", getUserId()))
+                            .toolCallbacks(toolCallbacks)
+                            .options(VertexAiGeminiChatOptions.builder()
+                                    .internalToolExecutionEnabled(false)
+                                    .build())
+                            .call()
+                            .chatResponse()
+            );
 
             // get message from llm, make only one tool being called a time
             AssistantMessage assistantMessage = response.getResult().getOutput();

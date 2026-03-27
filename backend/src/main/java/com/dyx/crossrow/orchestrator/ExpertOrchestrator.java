@@ -3,6 +3,7 @@ package com.dyx.crossrow.orchestrator;
 import com.dyx.crossrow.advisor.PromptInjectionGuardAdvisor;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
+import com.dyx.crossrow.service.RetryableLlmCaller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -28,15 +29,18 @@ public class ExpertOrchestrator {
     private final ChatClient routerClient;
     private final AgentFactory agentFactory;
     private final ObjectMapper objectMapper;
+    private final RetryableLlmCaller retryableLlmCaller;
 
     private static final List<String> VALID_DOMAINS = List.of("philosophy", "psychology", "sociology");
     private static final String DEFAULT_DOMAIN = "philosophy";
 
     public ExpertOrchestrator(@Qualifier("vertexAiGeminiChat") ChatModel chatModel,
                               AgentFactory agentFactory,
+                              RetryableLlmCaller retryableLlmCaller,
                               @Value("classpath:/prompts/orchestrator-prompt.st") Resource orchestratorPromptResource) {
         this.agentFactory = agentFactory;
         this.objectMapper = new ObjectMapper();
+        this.retryableLlmCaller = retryableLlmCaller;
 
         SystemPromptTemplate promptTemplate = new SystemPromptTemplate(orchestratorPromptResource);
 
@@ -80,10 +84,12 @@ public class ExpertOrchestrator {
      */
     private String determineExpert(String userMessage) {
         try {
-            String response = routerClient.prompt()
-                    .user(userMessage)
-                    .call()
-                    .content();
+            String response = retryableLlmCaller.callWithRetry(() ->
+                    routerClient.prompt()
+                            .user(userMessage)
+                            .call()
+                            .content()
+            );
 
             log.debug("Router raw response: {}", response);
 

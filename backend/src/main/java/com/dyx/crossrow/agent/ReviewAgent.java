@@ -1,6 +1,7 @@
 package com.dyx.crossrow.agent;
 
 import com.dyx.crossrow.model.ReviewResult;
+import com.dyx.crossrow.service.RetryableLlmCaller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -17,9 +18,12 @@ public class ReviewAgent {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RetryableLlmCaller retryableLlmCaller;
 
     public ReviewAgent(@Qualifier("openAiChatModel") ChatModel qwenChatModel,
+                       RetryableLlmCaller retryableLlmCaller,
                        @Value("classpath:/prompts/review-agent-result-prompt.st") Resource reviewPromptResource) {
+        this.retryableLlmCaller = retryableLlmCaller;
         SystemPromptTemplate promptTemplate = new SystemPromptTemplate(reviewPromptResource);
         this.chatClient = ChatClient.builder(qwenChatModel)
                 .defaultSystem(promptTemplate.render())
@@ -34,12 +38,14 @@ public class ReviewAgent {
         {output}
         """.formatted(task, finalOutput);
 
-        String response = chatClient.prompt()
-                .user(u -> u.text(userMessage)
-                        .param("task", task)
-                        .param("output", finalOutput))
-                .call()
-                .content();
+        String response = retryableLlmCaller.callWithRetry(() ->
+                chatClient.prompt()
+                        .user(u -> u.text(userMessage)
+                                .param("task", task)
+                                .param("output", finalOutput))
+                        .call()
+                        .content()
+        );
 
         return parseResponse(response);
     }

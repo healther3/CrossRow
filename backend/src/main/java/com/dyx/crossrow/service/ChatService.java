@@ -50,6 +50,7 @@ public class ChatService {
     private final AgentFactory agentFactory;
     private final ChatModelProvider chatModelProvider;
     private final UserService userService;
+    private final RetryableLlmCaller retryableLlmCaller;
 
     @jakarta.annotation.Resource(name = "hybridRagAdvisor")
     private Advisor hybridRagAdvisor;
@@ -90,7 +91,8 @@ public class ChatService {
      */
     public ChatService(@Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                        AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor,
-                       ChatModelProvider chatModelProvider, UserService userService, QuotaService quotaService) {
+                       ChatModelProvider chatModelProvider, UserService userService, QuotaService quotaService,
+                       RetryableLlmCaller retryableLlmCaller) {
 
         this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
         this.agentFactory = agentFactory;
@@ -99,6 +101,7 @@ public class ChatService {
         this.chatModelProvider = chatModelProvider;
         this.userService = userService;
         this.quotaService = quotaService;
+        this.retryableLlmCaller = retryableLlmCaller;
     }
 
     /**
@@ -144,13 +147,15 @@ public class ChatService {
         chatSessionService.autoGenerateTitleIfNeeded(chatId, userId, message);
         ChatClient chatClient = buildChatClientForUser(userId);
         
-        ChatClientResponse chatClientResponse = chatClient
-                .prompt()
-                .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
-                        .param("userId", userId))
-                .call()
-                .chatClientResponse();
+        ChatClientResponse chatClientResponse = retryableLlmCaller.callWithRetry(() ->
+                chatClient
+                        .prompt()
+                        .user(message)
+                        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                                .param("userId", userId))
+                        .call()
+                        .chatClientResponse()
+        );
         
         ChatResponse chatResponse = chatClientResponse.chatResponse();
         String content = chatResponse.getResult().getOutput().getText();
@@ -174,14 +179,16 @@ public class ChatService {
         chatSessionService.validateSessionOwnership(chatId, userId);
         ChatClient chatClient = buildChatClientForUser(userId);
         
-        PainReport painReport = chatClient
-                .prompt()
-                .system(systemPromptTemplate.render() + "***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
-                .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
-                        .param("userId", userId))
-                .call()
-                .entity(PainReport.class);
+        PainReport painReport = retryableLlmCaller.callWithRetry(() ->
+                chatClient
+                        .prompt()
+                        .system(systemPromptTemplate.render() + "***对话完后生成一个报告，标题为{user_name}的痛苦诊断，内容为解决方案列表，请以列表形式至少列举3-5    个解决方案***")
+                        .user(message)
+                        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                                .param("userId", userId))
+                        .call()
+                        .entity(PainReport.class)
+        );
 
         log.info("Report: {}", painReport);
         return painReport;
@@ -204,16 +211,18 @@ public class ChatService {
                 .googleSearchRetrieval(false)
                 .build();
 
-        ChatClientResponse chatClientResponse = chatClient
-                .prompt()
-                .options(options)
-                .user(message)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
-                        .param("userId", userId))
-                .advisors(hybridRagAdvisor)
-                .tools(imageGenerationTool)
-                .call()
-                .chatClientResponse();
+        ChatClientResponse chatClientResponse = retryableLlmCaller.callWithRetry(() ->
+                chatClient
+                        .prompt()
+                        .options(options)
+                        .user(message)
+                        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId)
+                                .param("userId", userId))
+                        .advisors(hybridRagAdvisor)
+                        .tools(imageGenerationTool)
+                        .call()
+                        .chatClientResponse()
+        );
 
         String content = chatClientResponse.chatResponse().getResult().getOutput().getText();
         log.info("content: {}", content);
@@ -230,15 +239,17 @@ public class ChatService {
         log.info("[链式调用] 开始处理: {}", message);
 
         log.info("正在调用搜索工具...");
-        ChatClientResponse chatClientTextResponse = defaultChatClient
-                .prompt()
-                .system("""
-                         请根据用户问题，搜索相关信息并给出回答
-                        """)
-                .user(message)
-                .tools(webSearchTool)
-                .call()
-                .chatClientResponse();
+        ChatClientResponse chatClientTextResponse = retryableLlmCaller.callWithRetry(() ->
+                defaultChatClient
+                        .prompt()
+                        .system("""
+                                 请根据用户问题，搜索相关信息并给出回答
+                                """)
+                        .user(message)
+                        .tools(webSearchTool)
+                        .call()
+                        .chatClientResponse()
+        );
 
         String summary = chatClientTextResponse
                 .chatResponse()
@@ -252,16 +263,19 @@ public class ChatService {
             summary = "（搜索未返回有效总结，尝试直接基于原问题生成）" + message;
         }
 
-        ChatClientResponse chatClientImageResponse = defaultChatClient
-                .prompt()
-                .system("""
-                         你是一个画师。根据用户提供的描述生成图片，可以为卡通或者写实
-                         请直接生成。
-                        """)
-                .user(summary)
-                .tools(imageGenerationTool)
-                .call()
-                .chatClientResponse();
+        final String finalSummary = summary;
+        ChatClientResponse chatClientImageResponse = retryableLlmCaller.callWithRetry(() ->
+                defaultChatClient
+                        .prompt()
+                        .system("""
+                                 你是一个画师。根据用户提供的描述生成图片，可以为卡通或者写实
+                                 请直接生成。
+                                """)
+                        .user(finalSummary)
+                        .tools(imageGenerationTool)
+                        .call()
+                        .chatClientResponse()
+        );
 
         String imageContent = chatClientImageResponse
                 .chatResponse()
@@ -281,15 +295,17 @@ public class ChatService {
     public String doChatWithMCP(String message, String chatId, String userId) {
         ChatClient defaultChatClient = buildDefaultChatClientForUser(userId);
 
-        ChatClientResponse chatClientTextResponse = defaultChatClient
-                .prompt()
-                .system("""
-                         请根据用户问题，搜索相关信息并给出回答
-                        """)
-                .user(message)
-                .toolCallbacks(toolCallbackProvider)
-                .call()
-                .chatClientResponse();
+        ChatClientResponse chatClientTextResponse = retryableLlmCaller.callWithRetry(() ->
+                defaultChatClient
+                        .prompt()
+                        .system("""
+                                 请根据用户问题，搜索相关信息并给出回答
+                                """)
+                        .user(message)
+                        .toolCallbacks(toolCallbackProvider)
+                        .call()
+                        .chatClientResponse()
+        );
 
         String content = chatClientTextResponse
                 .chatResponse()

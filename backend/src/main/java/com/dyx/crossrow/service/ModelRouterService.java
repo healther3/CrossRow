@@ -28,6 +28,7 @@ public class ModelRouterService {
     private final Map<String, ChatModel> models = new HashMap<>();
     private final ChatModel defaultModel;
     private final ChatClient reviewClient;
+    private final RetryableLlmCaller retryableLlmCaller;
 
     private static final String REVIEW_PROMPT = """
             You are a task complexity evaluator. Analyze the user's input and determine whether it requires a powerful model or a lightweight model.
@@ -61,10 +62,12 @@ public class ModelRouterService {
     public ModelRouterService(
             ModelRouterProperties properties,
             @Qualifier("vertexAiGeminiChat") ChatModel geminiChatModel,
-            @Autowired(required = false) @Qualifier("openAiChatModel") ChatModel qwenChatModel
+            @Autowired(required = false) @Qualifier("openAiChatModel") ChatModel qwenChatModel,
+            RetryableLlmCaller retryableLlmCaller
     ) {
         this.properties = properties;
         this.defaultModel = geminiChatModel;
+        this.retryableLlmCaller = retryableLlmCaller;
 
         models.put("gemini", geminiChatModel);
         
@@ -121,11 +124,13 @@ public class ModelRouterService {
         }
 
         try {
-            TaskReview review = reviewClient
-                    .prompt()
-                    .user("Evaluate the following user input:\n\n" + input)
-                    .call()
-                    .entity(TaskReview.class);
+            TaskReview review = retryableLlmCaller.callWithRetry(() ->
+                    reviewClient
+                            .prompt()
+                            .user("Evaluate the following user input:\n\n" + input)
+                            .call()
+                            .entity(TaskReview.class)
+            );
 
             if (review == null) {
                 log.warn("AI review returned null, falling back to complex model");

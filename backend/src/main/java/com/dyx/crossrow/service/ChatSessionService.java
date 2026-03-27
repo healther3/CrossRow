@@ -43,6 +43,7 @@ public class ChatSessionService {
     private final ChatSessionRepository sessionRepository;
     private final ChatMemory chatMemory;
     private final ChatModelProvider chatModelProvider;
+    private final RetryableLlmCaller retryableLlmCaller;
 
     /**
      * 创建新会话
@@ -230,17 +231,19 @@ public class ChatSessionService {
         
         ChatClient chatClient = ChatClient.builder(chatModelProvider.getQwenModel()).build();
         
-        String title = chatClient.prompt()
-                .system("""
-                        your only task is to generate a short session title based on user text
-                        Requirements:
-                        - Length between 5–15 characters
-                        - Summarize the core theme of the message
-                        - Return only the title text with no explanations or punctuation
-                        """)
-                .user(truncatedMessage)
-                .call()
-                .content();
+        String title = retryableLlmCaller.callWithRetry(() ->
+                chatClient.prompt()
+                        .system("""
+                                your only task is to generate a short session title based on user text
+                                Requirements:
+                                - Length between 5–15 characters
+                                - Summarize the core theme of the message
+                                - Return only the title text with no explanations or punctuation
+                                """)
+                        .user(truncatedMessage)
+                        .call()
+                        .content()
+        );
         
         if (title == null || title.isBlank()) {
             return truncatedMessage.substring(0, Math.min(20, truncatedMessage.length()));
