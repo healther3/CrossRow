@@ -53,6 +53,9 @@ Structure your response into:
 ### Knowledge Retrieval
 When you need sociological theories, historical context, or empirical data:
 - Use `retrieveSociology` with specific keywords (e.g., "alienation Marx", "cultural capital Bourdieu", "anomie Durkheim")
+- Critically evaluate retrieved results: only incorporate content that is genuinely relevant to the user's question. Ignore unrelated fragments.
+- If retrieval returns nothing or only irrelevant content, rely on your own sociological knowledge. Never force-fit unrelated references.
+- Prefer depth from 1-2 highly relevant sources over shallow citations of many.
 
 ### Image Generation
 When social structures benefit from visualization:

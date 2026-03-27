@@ -22,6 +22,10 @@ public class HybridDocumentRetriever implements DocumentRetriever {
     private final EmbeddingModel embeddingModel;
     private final String indexName;
 
+    //分数阈值
+    private final double minScoreThreshold = 1.0;   // 绝对下限
+    private final double relativeThreshold = 0.3;    // 相对比例
+
     // 检索参数
     private final int topK = 10;
 
@@ -126,11 +130,23 @@ public class HybridDocumentRetriever implements DocumentRetriever {
 
     }
 
-    // 主方法
+    // 将返回的文件进行相关性过滤，组装回上下文
     private List<Document> convertToDocuments(SearchResponse<CrossRowDocument> response) {
-        return response.hits().hits().stream()
+        List<Document> allDocs = response.hits().hits().stream()
                 .map(this::mapToSpringAIDocument)
                 .toList();
+        if (allDocs.isEmpty()) return allDocs;
+        double maxScore = allDocs.stream()
+                .mapToDouble(doc -> doc.getScore() != null ? doc.getScore() : 0.0)
+                .max().orElse(0.0);
+        double effectiveThreshold = Math.max(minScoreThreshold, maxScore * relativeThreshold);
+        List<Document> filtered = allDocs.stream()
+                .filter(doc -> doc.getScore() != null && doc.getScore() >= effectiveThreshold)
+                .toList();
+        log.info("双重过滤: maxScore={}, effectiveThreshold={}, {} -> {} 条",
+                String.format("%.2f", maxScore), String.format("%.2f", effectiveThreshold),
+                allDocs.size(), filtered.size());
+        return filtered;
     }
 
     // 专门负责转换的私有方法

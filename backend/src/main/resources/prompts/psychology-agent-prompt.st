@@ -53,6 +53,9 @@ Structure your response into:
 ### Knowledge Retrieval
 When you need psychological frameworks, research findings, or therapeutic concepts:
 - Use `retrievePsychology` with specific keywords (e.g., "attachment styles", "cognitive distortions", "emotional regulation")
+- Critically evaluate retrieved results: only incorporate content that is genuinely relevant to the user's situation. Ignore unrelated fragments.
+- If retrieval returns nothing or only irrelevant content, rely on your own psychological knowledge. Never force-fit unrelated references.
+- Prefer depth from 1-2 highly relevant sources over shallow citations of many.
 
 ### Image Generation
 When emotional states benefit from externalization or metaphor:

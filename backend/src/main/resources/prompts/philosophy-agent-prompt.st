@@ -51,6 +51,9 @@ Structure your response into:
 ### Knowledge Retrieval
 When you need precise philosophical definitions, historical context, or quotes:
 - Use `retrievePhilosophy` with specific keywords (e.g., "Stoicism anxiety", "Nietzsche will to power", "Buddhist attachment")
+- Critically evaluate retrieved results: only incorporate content that is genuinely relevant to the user's question. Ignore unrelated fragments.
+- If retrieval returns nothing or only irrelevant content, rely on your own philosophical knowledge. Never force-fit unrelated references.
+- Prefer depth from 1-2 highly relevant sources over shallow citations of many.
 
 ### Image Generation
 When abstract philosophical concepts benefit from visualization:

@@ -28,7 +28,9 @@ public class DomainRetrieveTool {
             return documents.stream()
                     .map(doc -> {
                         String filename = (String) doc.getMetadata().getOrDefault("filename", "Unknown Source");
-                        return String.format("[source: %s]\n%s", filename, doc.getText());
+                        Double score = doc.getScore();
+                        return String.format("[source: %s, relevance: %.2f]\n%s",
+                                filename, score != null ? score : 0.0, doc.getText());
                     })
                     .collect(Collectors.joining("\n\n---------------------\n\n"));
         } catch (Exception e) {
