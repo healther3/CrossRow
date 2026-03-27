@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.function.Supplier;
 
 /**
@@ -34,7 +36,8 @@ public class RetryableLlmCaller {
      * </pre>
      */
     @Retryable(
-            retryFor = { ResourceAccessException.class, WebClientResponseException.class },
+            retryFor = { ResourceAccessException.class, WebClientResponseException.class,
+                         SocketTimeoutException.class, IOException.class },
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 8000)
     )
