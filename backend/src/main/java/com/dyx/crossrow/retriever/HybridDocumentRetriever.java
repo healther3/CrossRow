@@ -13,7 +13,10 @@ import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import com.dyx.crossrow.utils.UserContext;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -101,7 +104,7 @@ public class HybridDocumentRetriever implements DocumentRetriever {
                 .size(topK)
                 .query(q -> q
                         .bool(b -> b
-                                .must(m -> m
+                                .should(m -> m
                                     .match(ma -> ma
                                         .field("content")
                                         .query(queryText)
@@ -130,23 +133,93 @@ public class HybridDocumentRetriever implements DocumentRetriever {
 
     }
 
-    // 将返回的文件进行相关性过滤，组装回上下文
     private List<Document> convertToDocuments(SearchResponse<CrossRowDocument> response) {
         List<Document> allDocs = response.hits().hits().stream()
                 .map(this::mapToSpringAIDocument)
                 .toList();
         if (allDocs.isEmpty()) return allDocs;
-        double maxScore = allDocs.stream()
+
+        Map<String, Document> deduplicated = new LinkedHashMap<>();
+        for (Document doc : allDocs) {
+            deduplicated.merge(doc.getId(), doc, (existing, incoming) ->
+                    (incoming.getScore() != null && incoming.getScore() > existing.getScore()) ? incoming : existing
+            );
+        }
+        List<Document> uniqueDocs = new ArrayList<>(deduplicated.values());
+
+        logScoreDistribution(uniqueDocs);
+
+        double maxScore = uniqueDocs.stream()
                 .mapToDouble(doc -> doc.getScore() != null ? doc.getScore() : 0.0)
                 .max().orElse(0.0);
+
         double effectiveThreshold = Math.max(minScoreThreshold, maxScore * relativeThreshold);
-        List<Document> filtered = allDocs.stream()
+        List<Document> filtered = uniqueDocs.stream()
                 .filter(doc -> doc.getScore() != null && doc.getScore() >= effectiveThreshold)
                 .toList();
-        log.info("双重过滤: maxScore={}, effectiveThreshold={}, {} -> {} 条",
-                String.format("%.2f", maxScore), String.format("%.2f", effectiveThreshold),
-                allDocs.size(), filtered.size());
+
+        log.info("[RAG过滤] maxScore={}, threshold={}, 去重后{}条 -> 过滤后{}条",
+                String.format("%.4f", maxScore), String.format("%.4f", effectiveThreshold),
+                uniqueDocs.size(), filtered.size());
+
         return filtered;
+    }
+
+    /**
+     * 诊断日志：输出每条命中的分数、来源文件名，以及分数分布统计。
+     * 用于校准 minScoreThreshold，观察稳定后可降级为 debug 或删除。
+     */
+    private void logScoreDistribution(List<Document> docs) {
+        if (docs.isEmpty()) return;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("\n[RAG分数诊断] index=%s, 命中%d条:\n", indexName, docs.size()));
+        sb.append(String.format("  %-4s | %-10s | %s\n", "rank", "score", "source"));
+        sb.append("  -----|------------|------------------------------------------\n");
+
+        double sum = 0;
+        double min = Double.MAX_VALUE;
+        double max = Double.MIN_VALUE;
+        List<Double> scores = new ArrayList<>();
+
+        for (int i = 0; i < docs.size(); i++) {
+            Document doc = docs.get(i);
+            double score = doc.getScore() != null ? doc.getScore() : 0.0;
+            String filename = (String) doc.getMetadata().getOrDefault("filename", "unknown");
+            String preview = doc.getText().substring(0, Math.min(50, doc.getText().length())).replace("\n", " ");
+
+            sb.append(String.format("  #%-3d | %-10.4f | %s [%s]\n", i + 1, score, filename, preview));
+
+            scores.add(score);
+            sum += score;
+            if (score < min) min = score;
+            if (score > max) max = score;
+        }
+
+        double avg = sum / scores.size();
+
+        // 计算相邻文档之间的最大分数跌落（gap），帮助找到自然分界线
+        double maxGap = 0;
+        int gapPosition = -1;
+        for (int i = 0; i < scores.size() - 1; i++) {
+            double gap = scores.get(i) - scores.get(i + 1);
+            if (gap > maxGap) {
+                maxGap = gap;
+                gapPosition = i + 1;
+            }
+        }
+
+        sb.append("  -----|------------|------------------------------------------\n");
+        sb.append(String.format("  统计: min=%.4f, max=%.4f, avg=%.4f\n", min, max, avg));
+        if (gapPosition > 0) {
+            sb.append(String.format("  最大分数跌落: #%d→#%d, gap=%.4f (建议阈值参考: %.4f)\n",
+                    gapPosition, gapPosition + 1, maxGap, scores.get(gapPosition)));
+        }
+        sb.append(String.format("  当前阈值: absolute=%.4f, relative=%.1f%%×max=%.4f, effective=%.4f",
+                minScoreThreshold, relativeThreshold * 100, max * relativeThreshold,
+                Math.max(minScoreThreshold, max * relativeThreshold)));
+
+        log.info(sb.toString());
     }
 
     // 专门负责转换的私有方法
