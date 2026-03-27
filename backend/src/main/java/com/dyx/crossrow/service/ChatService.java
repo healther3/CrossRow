@@ -33,10 +33,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -360,7 +366,7 @@ public class ChatService {
         chatSessionService.validateSessionOwnership(chatId, userId);
         ChatClient chatClient = buildChatClientForUser(userId);
         
-        // 聊天内容流，每个 chunk 作为 message 事件
+        // 聊天内容流，每个 chunk 作为 message 事件，带重试
         Flux<ServerSentEvent<String>> contentStream = chatClient
                 .prompt()
                 .user(message)
@@ -368,6 +374,7 @@ public class ChatService {
                         .param("userId", userId))
                 .stream()
                 .content()
+                .retryWhen(streamRetrySpec())
                 .map(content -> ServerSentEvent.<String>builder()
                         .event("message")
                         .data(content)
@@ -411,7 +418,7 @@ public class ChatService {
         log.info("Multimodal chat - User: {}, Session: {}, Media count: {}", 
                 userId, chatId, mediaContents != null ? mediaContents.size() : 0);
 
-        // 聊天内容流
+        // 聊天内容流，带重试
         Flux<ServerSentEvent<String>> contentStream = chatClient
                 .prompt()
                 .messages(userMessage)
@@ -419,6 +426,7 @@ public class ChatService {
                         .param("userId", userId))
                 .stream()
                 .content()
+                .retryWhen(streamRetrySpec())
                 .map(content -> ServerSentEvent.<String>builder()
                         .event("message")
                         .data(content)
@@ -602,7 +610,7 @@ public class ChatService {
         // 构建 UserMessage (支持多模态)
         UserMessage userMessage = mediaProcessingService.buildUserMessage(message, mediaContents);
 
-        // 聊天内容流
+        // 聊天内容流，带重试
         Flux<ServerSentEvent<String>> contentStream = routedClient
                 .prompt()
                 .messages(userMessage)
@@ -610,6 +618,7 @@ public class ChatService {
                         .param("userId", userId))
                 .stream()
                 .content()
+                .retryWhen(streamRetrySpec())
                 .map(content -> ServerSentEvent.<String>builder()
                         .event("message")
                         .data(content)
@@ -662,7 +671,7 @@ public class ChatService {
                 )
                 .build();
 
-        // 聊天内容流
+        // 聊天内容流，带重试
         Flux<ServerSentEvent<String>> contentStream = routedClient
                 .prompt()
                 .user(message)
@@ -670,6 +679,7 @@ public class ChatService {
                         .param("userId", userId))
                 .stream()
                 .content()
+                .retryWhen(streamRetrySpec())
                 .map(content -> ServerSentEvent.<String>builder()
                         .event("message")
                         .data(content)
@@ -693,6 +703,34 @@ public class ChatService {
      */
     public RouteDecision previewRoute(String message) {
         return modelRouterService.getRouteDecision(message);
+    }
+
+    /**
+     * 判断是否为瞬时故障（可重试）
+     */
+    private boolean isTransientError(Throwable e) {
+        if (e instanceof WebClientResponseException wcre) {
+            int status = wcre.getStatusCode().value();
+            return status == 429 || status == 500 || status == 502 
+                   || status == 503 || status == 504;
+        }
+        return e instanceof ResourceAccessException 
+               || e instanceof SocketTimeoutException
+               || e instanceof IOException;
+    }
+
+    /**
+     * 创建流式调用的重试策略
+     * 3 次重试，指数退避 1s → 2s → 4s，上限 8s
+     */
+    private Retry streamRetrySpec() {
+        return Retry.backoff(3, Duration.ofSeconds(1))
+                .maxBackoff(Duration.ofSeconds(8))
+                .filter(this::isTransientError)
+                .doBeforeRetry(signal -> 
+                        log.warn("LLM 流式调用重试 #{}: {}", 
+                                signal.totalRetries() + 1, 
+                                signal.failure().getMessage()));
     }
 
 }
