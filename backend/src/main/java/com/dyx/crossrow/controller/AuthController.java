@@ -15,12 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
     @Resource
-    private AuthService userService;
+    private AuthService authService;
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody AuthRequest request) {
         try {
-            userService.register(request);
+            authService.register(request);
             return ResponseEntity.ok("register success");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -30,7 +30,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
         try {
-            AuthResponse response = userService.login(request);
+            AuthResponse response = authService.login(request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
