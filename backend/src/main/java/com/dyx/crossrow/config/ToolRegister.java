@@ -57,8 +57,17 @@ public class ToolRegister {
     }
 
     @Bean("crossRowTools")
-    public ToolCallback[] crossRowTools(@Qualifier("sharedTools") ToolCallback[] sharedTools) {
-        return sharedTools;
+    public ToolCallback[] crossRowTools(@Qualifier("sharedTools") ToolCallback[] sharedTools,
+                                        PhilosophyRetrieveTool philosophyRetrieveTool,
+                                        PsychologyRetrieveTool psychologyRetrieveTool,
+                                        SociologyRetrieveTool sociologyRetrieveTool)
+    {
+        ToolCallback[] domainTools = ToolCallbacks.from(
+                philosophyRetrieveTool,
+                psychologyRetrieveTool,
+                sociologyRetrieveTool
+        );
+        return mergeTools(domainTools, sharedTools);
     }
 
     // 通用工具（所有 Agent 共享）
