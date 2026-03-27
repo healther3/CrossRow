@@ -1,9 +1,10 @@
 package com.dyx.crossrow.controller;
 
+import com.dyx.crossrow.factory.ChatModelProvider;
 import com.dyx.crossrow.model.User;
 import com.dyx.crossrow.repository.UserRepository;
-import com.dyx.crossrow.service.ChatModelProvider;
 import com.dyx.crossrow.service.FileUploadService;
+import com.dyx.crossrow.service.UserService;
 import com.dyx.crossrow.utils.UserContext;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,9 @@ public class UserController {
 
     @Resource
     private ChatModelProvider chatModelProvider;
+
+    @Resource
+    private UserService userService;
 
     @GetMapping("/background")
     public ResponseEntity<String> getBackground() {
@@ -73,7 +77,7 @@ public class UserController {
     @GetMapping("/model-preference")
     public ResponseEntity<Map<String, Object>> getModelPreference() {
         String userId = UserContext.getUserId();
-        String preference = chatModelProvider.getUserPreference(userId);
+        String preference = userService.getPreferredModel(userId);
         Set<String> availableModels = chatModelProvider.getAvailableModels();
         
         return ResponseEntity.ok(Map.of(
@@ -102,7 +106,7 @@ public class UserController {
         }
         
         try {
-            chatModelProvider.setUserPreference(userId, modelName);
+            userService.setPreferredModel(userId, modelName);
             return ResponseEntity.ok(Map.of(
                     "message", "Model preference updated successfully",
                     "model", modelName

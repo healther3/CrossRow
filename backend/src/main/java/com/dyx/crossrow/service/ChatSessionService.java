@@ -1,6 +1,7 @@
 package com.dyx.crossrow.service;
 
 import com.dyx.crossrow.exceptions.SessionAccessDeniedException;
+import com.dyx.crossrow.factory.ChatModelProvider;
 import com.dyx.crossrow.model.ChatSession;
 import com.dyx.crossrow.model.dto.ChatMessageDTO;
 import com.dyx.crossrow.repository.ChatSessionRepository;

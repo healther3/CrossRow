@@ -7,6 +7,7 @@ import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.factory.AgentFactory;
+import com.dyx.crossrow.factory.ChatModelProvider;
 import com.dyx.crossrow.model.ChatSession;
 import com.dyx.crossrow.model.QuotaType;
 import com.dyx.crossrow.model.dto.MediaContentDTO;
@@ -48,6 +49,7 @@ public class ChatService {
     private final SystemPromptTemplate systemPromptTemplate;
     private final AgentFactory agentFactory;
     private final ChatModelProvider chatModelProvider;
+    private final UserService userService;
 
     @jakarta.annotation.Resource(name = "hybridRagAdvisor")
     private Advisor hybridRagAdvisor;
@@ -88,13 +90,14 @@ public class ChatService {
      */
     public ChatService(@Value("classpath:/prompts/system-prompt.st") Resource systemPromptResource,
                        AgentFactory agentFactory, ChatMemory chatMemory, SimpleAuthAdvisor simpleAuthAdvisor,
-                       ChatModelProvider chatModelProvider, QuotaService quotaService) {
+                       ChatModelProvider chatModelProvider, UserService userService, QuotaService quotaService) {
 
         this.systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
         this.agentFactory = agentFactory;
         this.chatMemory = chatMemory;
         this.simpleAuthAdvisor = simpleAuthAdvisor;
         this.chatModelProvider = chatModelProvider;
+        this.userService = userService;
         this.quotaService = quotaService;
     }
 
@@ -102,7 +105,8 @@ public class ChatService {
      * Build a ChatClient with user's preferred model and standard advisors.
      */
     private ChatClient buildChatClientForUser(String userId) {
-        ChatModel model = chatModelProvider.getModelForUser(userId);
+        String modelName = userService.getPreferredModel(userId);
+        ChatModel model = chatModelProvider.getByName(modelName);
         return ChatClient.builder(model)
                 .defaultSystem(systemPromptTemplate.render())
                 .defaultAdvisors(
@@ -119,7 +123,8 @@ public class ChatService {
      * Build a simple ChatClient with user's preferred model (no advisors).
      */
     private ChatClient buildDefaultChatClientForUser(String userId) {
-        ChatModel model = chatModelProvider.getModelForUser(userId);
+        String modelName = userService.getPreferredModel(userId);
+        ChatModel model = chatModelProvider.getByName(modelName);
         return ChatClient.builder(model)
                 .defaultAdvisors(new PromptInjectionGuardAdvisor())
                 .build();
