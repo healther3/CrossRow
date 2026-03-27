@@ -5,8 +5,10 @@ import com.dyx.crossrow.agent.CrossRowAgent;
 import com.dyx.crossrow.agent.ExpertAgent;
 import com.dyx.crossrow.agent.ReviewAgent;
 import com.dyx.crossrow.service.QuotaService;
+import com.dyx.crossrow.service.RetryableLlmCaller;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
+import com.google.auth.Retryable;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ public class AgentFactory {
     private final SimpleAuthAdvisor simpleAuthAdvisor;
     private final ChatModelProvider chatModelProvider;
     private final QuotaService quotaService;
+    private final RetryableLlmCaller retryableLlmCaller;
     
     @Autowired(required = false)
     private ReviewAgent reviewAgent;
@@ -48,6 +51,7 @@ public class AgentFactory {
                         SimpleAuthAdvisor simpleAuthAdvisor,
                         ChatModelProvider chatModelProvider,
                         QuotaService quotaService,
+                        RetryableLlmCaller retryableLlmCaller,
                         @Qualifier("philosophyTools") ToolCallback[] philosophyTools,
                         @Qualifier("psychologyTools") ToolCallback[] psychologyTools,
                         @Qualifier("sociologyTools") ToolCallback[] sociologyTools,
@@ -68,6 +72,7 @@ public class AgentFactory {
         this.psychologyPrompt = psychologyPrompt;
         this.sociologyPrompt = sociologyPrompt;
         this.nextStepPrompt = nextStepPrompt;
+        this.retryableLlmCaller = retryableLlmCaller;
     }
 
     /**
@@ -114,7 +119,8 @@ public class AgentFactory {
                 simpleAuthAdvisor,
                 quotaService,
                 prompt,
-                nextStepPrompt
+                nextStepPrompt,
+                retryableLlmCaller
         );
 
         agent.setUserId(userId);
