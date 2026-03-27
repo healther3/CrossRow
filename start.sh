@@ -6,6 +6,8 @@ docker logs -f crossrow-backend
 docker logs --tail 200 crossrow-backend
 # 只看 RAG 诊断相关的日志
 docker logs -f crossrow-backend 2>&1 | findstr "RAG"
+# docker
+docker logs -f crossrow-backend | Select-String "RAG"
 # 查看容器状态
 docker ps
 # 重启后端容器（改完代

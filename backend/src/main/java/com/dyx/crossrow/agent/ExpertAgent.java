@@ -7,6 +7,7 @@ import com.dyx.crossrow.advisor.SimpleQuotaAdvisor;
 import com.dyx.crossrow.model.QuotaType;
 import com.dyx.crossrow.model.ToolChoice;
 import com.dyx.crossrow.service.QuotaService;
+import com.dyx.crossrow.service.RetryableLlmCaller;
 import com.dyx.crossrow.tool.SimpleToolCallManager;
 import com.dyx.crossrow.tool.ToolCallStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -37,12 +38,14 @@ public class ExpertAgent extends ToolCallAgent {
                        SimpleAuthAdvisor simpleAuthAdvisor,
                        QuotaService quotaService,
                        Resource systemPromptResource,
-                       Resource nextStepPromptResource) {
+                       Resource nextStepPromptResource,
+                       RetryableLlmCaller retryableLlmCaller) {
         super(domainTools,
               List.of("askHuman","terminate"),
               toolCallingManager,
               ToolChoice.AUTO,
-              toolCallStrategy);
+              toolCallStrategy,
+                retryableLlmCaller);
 
         this.domain = domain;
 

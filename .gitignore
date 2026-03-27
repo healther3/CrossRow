@@ -62,3 +62,5 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/pnpm-debug.log*
 frontend/lerna-debug.log*
+/backend/src/main/resources/application-local.yml
+/backend/src/main/resources/application-test.yml
