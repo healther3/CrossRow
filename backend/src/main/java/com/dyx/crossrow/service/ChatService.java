@@ -91,6 +91,9 @@ public class ChatService {
     @jakarta.annotation.Resource
     private QuotaService quotaService;
 
+    @jakarta.annotation.Resource
+    private com.dyx.crossrow.chatmemory.ChatMemoryCompressor chatMemoryCompressor;
+
     /**
      * Initialize the ChatService with ChatModelProvider for unified model management.
      * Models are selected based on user preferences stored in the database.
@@ -108,6 +111,16 @@ public class ChatService {
         this.userService = userService;
         this.quotaService = quotaService;
         this.retryableLlmCaller = retryableLlmCaller;
+    }
+
+    /**
+     * Save agent memory to Redis and trigger async compression if needed.
+     */
+    private void saveAndCompressAgentMemory(String chatId, List<Message> messages) {
+        chatMemory.clear(chatId);
+        chatMemory.add(chatId, messages);
+        log.info("Agent 完成，已保存 {} 条消息到内存", messages.size());
+        chatMemoryCompressor.compressIfNeeded(chatId);
     }
 
     /**
@@ -342,13 +355,7 @@ public class ChatService {
         // 让 Agent 开始推理想象并执行工具 (它会自动将新问题 add 进 messageList)
         String response = agent.run(message);
 
-        // 提取 Agent 思考完毕后的完整大脑状态
-        List<Message> updatedMemory = agent.getMessageList();
-
-        // 保存回 Redis (注意：你的 RedisChatMemory.add 是追加逻辑，如果传入全量 list 会导致重复。
-        // 所以我们先 clear 掉旧的，再存入新的全量历史，或者你可以在 RedisChatMemory 里优化一下合并逻辑)
-        chatMemory.clear(chatId);
-        chatMemory.add(chatId, updatedMemory);
+        saveAndCompressAgentMemory(chatId, agent.getMessageList());
 
         return response;
     }
@@ -467,17 +474,8 @@ public class ChatService {
         }
 
         // 让 Agent 开始推理想象并执行工具 (它会自动将新问题 add 进 messageList)
-        // 使用回调在 Agent 完成后保存内存，避免异步执行时机问题
-        // 注意：标题生成必须在 onComplete 中同步执行，确保在 emitter.complete() 之前发送
         SseEmitter response = agent.runStream(message, () -> {
-            // 提取 Agent 思考完毕后的完整大脑状态
-            List<Message> updatedMemory = agent.getMessageList();
-
-            // 保存回 Redis (注意：你的 RedisChatMemory.add 是追加逻辑，如果传入全量 list 会导致重复。
-            // 所以我们先 clear 掉旧的，再存入新的全量历史，或者你可以在 RedisChatMemory 里优化一下合并逻辑)
-            chatMemory.clear(chatId);
-            chatMemory.add(chatId, updatedMemory);
-            log.info("Agent 完成，已保存 {} 条消息到内存", updatedMemory.size());
+            saveAndCompressAgentMemory(chatId, agent.getMessageList());
         }, emitter -> {
             // 同步生成标题，确保在 emitter.complete() 之前发送 session_title 事件
             chatSessionService.autoGenerateTitleIfNeededSync(chatId, userId, message, emitter);
@@ -507,12 +505,8 @@ public class ChatService {
         }
 
         SseEmitter response = agent.runStream(message, images, () -> {
-            List<Message> updatedMemory = agent.getMessageList();
-            chatMemory.clear(chatId);
-            chatMemory.add(chatId, updatedMemory);
-            log.info("Agent 完成，已保存 {} 条消息到内存", updatedMemory.size());
+            saveAndCompressAgentMemory(chatId, agent.getMessageList());
         }, emitter -> {
-            // 同步生成标题，确保在 emitter.complete() 之前发送 session_title 事件
             chatSessionService.autoGenerateTitleIfNeededSync(chatId, userId, message, emitter);
         });
 
@@ -555,10 +549,7 @@ public class ChatService {
 
         // 4. 执行专家 Agent，完成后保存记忆
         SseEmitter response = expert.runStream(message, images, () -> {
-            List<Message> updatedMemory = expert.getMessageList();
-            chatMemory.clear(chatId);
-            chatMemory.add(chatId, updatedMemory);
-            log.info("{} 专家完成，已保存 {} 条消息到内存", domain, updatedMemory.size());
+            saveAndCompressAgentMemory(chatId, expert.getMessageList());
         }, emitter -> {
             // 同步生成标题，确保在 emitter.complete() 之前发送 session_title 事件
             chatSessionService.autoGenerateTitleIfNeededSync(chatId, userId, message, emitter);
