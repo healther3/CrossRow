@@ -25,7 +25,7 @@ public class RedisChatMemory implements ChatMemory {
     private final int maxMessages;
 
     public RedisChatMemory(StringRedisTemplate redisTemplate, Duration ttl) {
-        this(redisTemplate, ttl, 10);  // 默认10条
+        this(redisTemplate, ttl, 20);  // 默认20条
     }
 
     public RedisChatMemory(StringRedisTemplate redisTemplate, Duration ttl, int maxMessages) {
@@ -52,6 +52,10 @@ public class RedisChatMemory implements ChatMemory {
 
             // 添加新消息（只添加有有效内容的消息）
             for (Message message : messages) {
+                if (message instanceof ToolResponseMessage) {
+                    log.debug("Skipping ToolResponseMessage for conversation: {}", conversationId);
+                    continue;
+                }
                 String content = message.getText();
                 // 跳过没有文本内容的消息（如只有 toolCalls 的 AssistantMessage 或 ToolResponseMessage）
                 if (content != null && !content.trim().isEmpty()) {
@@ -141,7 +145,10 @@ public class RedisChatMemory implements ChatMemory {
             case "USER" -> new UserMessage(content);
             case "ASSISTANT" -> new AssistantMessage(content);
             case "SYSTEM" -> new SystemMessage(content);
-            default -> new UserMessage(content);
+            default -> {
+                log.warn("Unknown message type '{}' in Redis, skipping", type);
+                yield null;
+            }
         };
     }
 }
