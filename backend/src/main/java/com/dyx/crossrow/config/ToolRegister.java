@@ -57,6 +57,11 @@ public class ToolRegister {
     }
 
     @Bean
+    public CalculatorTool calculatorTool(){
+        return new CalculatorTool();
+    }
+
+    @Bean
     public GetCurrentTimeTool getCurrentTimeTool(){
         return new GetCurrentTimeTool();
     }
@@ -82,14 +87,16 @@ public class ToolRegister {
                                       TerminateTool terminateTool,
                                       UpdateUserMemoryTool updateUserMemoryTool,
                                       AskHumanTool askHumanTool,
-                                      GetCurrentTimeTool getCurrentTimeTool){
+                                      GetCurrentTimeTool getCurrentTimeTool,
+                                      CalculatorTool calculatorTool){
         return ToolCallbacks.from(
                 webSearchTool,
                 imageGenerationTool,
                 terminateTool,
                 updateUserMemoryTool,
                 askHumanTool,
-                getCurrentTimeTool
+                getCurrentTimeTool,
+                calculatorTool
         );
     }
 
