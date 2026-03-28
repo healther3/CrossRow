@@ -34,7 +34,7 @@ Documents are indexed into Elasticsearch at startup using **hybrid retrieval** â
 | Tool | Description |
 |------|-------------|
 | `searchWeb` | Brave Search API, returns top 5 results |
-| `generateImage` | Vertex AI Imagen, supports multiple styles |
+| `generateImage` | gemini-2.5-flash(nano banana), supports multiple styles |
 | `askHuman` | Pauses execution to ask the user for clarification |
 | `terminate` | Ends the agent loop with a final answer |
 | `updateUserMemory` | Persists user preferences/facts to Elasticsearch for long-term recall |
