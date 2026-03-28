@@ -41,7 +41,8 @@ public class WebConfiguration implements WebMvcConfigurer {
                         "/swagger-ui/**",       // Swagger UI
                         "/v3/api-docs/**",      // OpenAPI 数据
                         "/webjars/**",          // 静态资源
-                        "/images/**"            // 静态图片资源 (context-path /api 下)
+                        "/images/**",           // 静态图片资源 (context-path /api 下)
+                        "/eval/**"              // 评测端点 (benchmark use only)
                 );
     }
 }

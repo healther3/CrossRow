@@ -62,5 +62,12 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/pnpm-debug.log*
 frontend/lerna-debug.log*
+
+# ====== 评测 (evaluation/) ======
+evaluation/reports/
+evaluation/config_local.py
+evaluation/__pycache__/
+evaluation/utils/__pycache__/
+
 /backend/src/main/resources/application-local.yml
 /backend/src/main/resources/application-test.yml
