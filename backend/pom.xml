@@ -201,6 +201,13 @@
             <version>5.8.38</version>
         </dependency>
 
+        <!-- Safe math expression evaluator (replaces SpEL for CalculatorTool) -->
+        <dependency>
+            <groupId>net.objecthunter</groupId>
+            <artifactId>exp4j</artifactId>
+            <version>0.4.8</version>
+        </dependency>
+
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-discoveryengine</artifactId>

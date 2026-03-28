@@ -1,42 +1,74 @@
 package com.dyx.crossrow.tool;
 
 import lombok.extern.slf4j.Slf4j;
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.expression.ExpressionParser;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
+
+import java.util.regex.Pattern;
 
 @Slf4j
 public class CalculatorTool {
 
-    private final ExpressionParser parser;
+    private static final Pattern SAFE_EXPRESSION = Pattern.compile(
+            "^[0-9+\\-*/%^().,'\\s" +
+            "a-z" +   // function names like sqrt, sin, log...
+            "A-Z" +   // constants like PI, E
+            "]*$"
+    );
 
-    public CalculatorTool() {
-        // 初始化 Spring 表达式解析器
-        this.parser = new SpelExpressionParser();
-    }
+    private static final int MAX_EXPRESSION_LENGTH = 500;
 
     @Tool(
             name = "calculator",
-            description = "Evaluates mathematical expressions. ALWAYS use this tool for any math operations (addition, subtraction, multiplication, division) to avoid calculation errors. Input MUST be a valid math string (e.g., '15.5 * (2 + 3)')."
+            description = "Evaluates mathematical expressions safely. Supports: " +
+                    "basic arithmetic (+, -, *, /, %, ^), " +
+                    "functions (sqrt, abs, sin, cos, tan, log, log2, log10, exp, ceil, floor, " +
+                    "asin, acos, atan, sinh, cosh, tanh, cbrt), " +
+                    "and constants (pi, e). " +
+                    "Examples: '15.5 * (2 + 3)', 'sqrt(144)', '2^10', 'sin(pi/2)', 'log10(1000)'. " +
+                    "ALWAYS use this tool for any math operations to avoid calculation errors."
     )
     public String calculate(
-            @ToolParam(description = "The mathematical expression to evaluate.")
+            @ToolParam(description = "The mathematical expression to evaluate, e.g. '15.5 * (2 + 3)' or 'sqrt(144)'.")
             String expression) {
 
+        if (expression == null || expression.isBlank()) {
+            return "Error: Expression cannot be empty.";
+        }
+
+        String trimmed = expression.trim();
+
+        if (trimmed.length() > MAX_EXPRESSION_LENGTH) {
+            return "Error: Expression too long (max " + MAX_EXPRESSION_LENGTH + " characters).";
+        }
+
+        if (!SAFE_EXPRESSION.matcher(trimmed).matches()) {
+            return "Error: Expression contains invalid characters. Only numbers, operators (+, -, *, /, %, ^), " +
+                    "parentheses, and math function names are allowed.";
+        }
+
         try {
-            log.info("Agent calculating: {}", expression);
+            log.info("Agent calculating: {}", trimmed);
 
-            // 1. 执行数学表达式的计算
-            Object result = parser.parseExpression(expression).getValue();
+            Expression exp = new ExpressionBuilder(trimmed).build();
+            double result = exp.evaluate();
 
-            // 2. 将结果返回给 Agent
-            return "Result: " + result.toString();
+            if (Double.isNaN(result) || Double.isInfinite(result)) {
+                return "Error: Calculation resulted in " + (Double.isNaN(result) ? "NaN (undefined)" : "Infinity") +
+                        ". Please check the expression.";
+            }
+
+            if (result == Math.floor(result) && !Double.isInfinite(result)) {
+                return "Result: " + (long) result;
+            }
+            return "Result: " + result;
 
         } catch (Exception e) {
-            log.error("Agent calculation failed for: {}", expression, e);
-            // 给 Agent 返回明确的错误信息，引导它修正表达式
-            return "Error: Invalid mathematical expression. Please ensure you are sending a standard math formula.";
+            log.error("Agent calculation failed for: {}", trimmed, e);
+            return "Error: Could not evaluate the expression. " +
+                    "Please ensure it is a valid math formula (e.g. '15.5 * (2 + 3)' or 'sqrt(144)').";
         }
     }
 }
