@@ -56,6 +56,11 @@ public class ToolRegister {
         return new AskHumanTool();
     }
 
+    @Bean
+    public GetCurrentTimeTool getCurrentTimeTool(){
+        return new GetCurrentTimeTool();
+    }
+
     @Bean("crossRowTools")
     public ToolCallback[] crossRowTools(@Qualifier("sharedTools") ToolCallback[] sharedTools,
                                         PhilosophyRetrieveTool philosophyRetrieveTool,
@@ -76,13 +81,15 @@ public class ToolRegister {
                                       ImageGenerationTool imageGenerationTool,
                                       TerminateTool terminateTool,
                                       UpdateUserMemoryTool updateUserMemoryTool,
-                                      AskHumanTool askHumanTool){
+                                      AskHumanTool askHumanTool,
+                                      GetCurrentTimeTool getCurrentTimeTool){
         return ToolCallbacks.from(
                 webSearchTool,
                 imageGenerationTool,
                 terminateTool,
                 updateUserMemoryTool,
-                askHumanTool
+                askHumanTool,
+                getCurrentTimeTool
         );
     }
 
